@@ -1,0 +1,1 @@
+print("Let's start BSC journey")
