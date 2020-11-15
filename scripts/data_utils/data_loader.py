@@ -78,6 +78,9 @@ class CoCoTrainingDataset(dset.VisionDataset):
 
         segmentations = {}
         for annotation in annotations:
+            if not isinstance(annotation["segmentation"], list):
+                continue
+
             category_index = annotation["category_id"]
             category_name = self.coco_segmentation.loadCats(ids=category_index)[0]["name"]
 
