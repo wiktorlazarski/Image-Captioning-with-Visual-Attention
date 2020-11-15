@@ -1,5 +1,5 @@
 import pytest
-import src.preparation.load_data as service
+import scripts.data_utils.data_loader as service
 from PIL import Image
 
 
@@ -77,7 +77,7 @@ def test_load_segmentations(coco_dataset: service.CoCoTrainingDataset) -> None:
     assert result == expected_result
 
 
-def test_getitem_return_correct_result(coco_dataset: service.CoCoTrainingDataset) -> None:
+def test_getitem(coco_dataset: service.CoCoTrainingDataset) -> None:
     # given
     grizzly_index = 1
     expected_result = (
