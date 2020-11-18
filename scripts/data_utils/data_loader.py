@@ -2,8 +2,8 @@ import os
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
-import PIL
 import numpy as np
+import PIL
 from pycocotools.coco import COCO
 from torchvision import datasets as dset
 
