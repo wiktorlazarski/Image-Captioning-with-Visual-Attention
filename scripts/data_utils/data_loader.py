@@ -1,37 +1,37 @@
 import os
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import PIL
+import numpy as np
 from pycocotools.coco import COCO
 from torchvision import datasets as dset
 
 
 @dataclass
 class CoCoTrainingDatasetPaths:
-    images: Union[str, Path]
-    captions_json: Union[str, Path]
-    segmentation_json: Union[str, Path]
+    images: str
+    captions_json: str
+    segmentation_json: str
 
 
 COCO_TRAIN_DATASET_PATHS = CoCoTrainingDatasetPaths(
-    images=Path("./data/validation/train2017"),
-    captions_json=Path("./data/validation/captions_train2017.json"),
-    segmentation_json=Path("./data/validation/instances_train2017.json"),
+    images="./data/validation/train2017",
+    captions_json="./data/validation/captions_train2017.json",
+    segmentation_json="./data/validation/instances_train2017.json",
 )
 
 COCO_VALIDATION_DATASET_PATHS = CoCoTrainingDatasetPaths(
-    images=Path("./data/validation/val2017"),
-    captions_json=Path("./data/validation/captions_val2017.json"),
-    segmentation_json=Path("./data/validation/instances_val2017.json"),
+    images="./data/validation/val2017",
+    captions_json="./data/validation/captions_val2017.json",
+    segmentation_json="./data/validation/instances_val2017.json",
 )
 
 
 class CoCoTrainingDataset(dset.VisionDataset):
     Caption = str
     ObjectCategory = str
-    SegmentationMask = List[float]
+    SegmentationMask = np.array
 
     def __init__(
         self,
@@ -78,16 +78,21 @@ class CoCoTrainingDataset(dset.VisionDataset):
 
         segmentations = {}
         for annotation in annotations:
-            if not isinstance(annotation["segmentation"], list):
-                continue
-
             category_index = annotation["category_id"]
             category_name = self.coco_segmentation.loadCats(ids=category_index)[0]["name"]
+            category_name = category_name.strip()
 
-            if category_name not in segmentations.keys():
-                segmentations[category_name] = annotation["segmentation"]
-            else:
-                segmentations[category_name].append(annotation["segmentation"][0])
+            try:
+                segment_mask = self.coco_segmentation.annToMask(annotation)
+                if len(segment_mask) == 0:
+                    continue
+
+                if category_name not in segmentations:
+                    segmentations[category_name] = []
+
+                segmentations[category_name].append(segment_mask)
+            except:
+                pass
 
         return segmentations
 
