@@ -1,6 +1,6 @@
 import os
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 import PIL
@@ -31,7 +31,7 @@ COCO_VALIDATION_DATASET_PATHS = CoCoTrainingDatasetPaths(
 class CoCoTrainingDataset(dset.VisionDataset):
     Caption = str
     ObjectCategory = str
-    SegmentationMask = np.array
+    SegmentationMask = np.ndarray
 
     def __init__(
         self,
