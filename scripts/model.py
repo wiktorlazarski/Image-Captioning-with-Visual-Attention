@@ -5,9 +5,9 @@ import torch.nn as nn
 from torchvision.models import vgg19
 
 
-class Encoder(nn.Module):
+class VGG19Encoder(nn.Module):
     def __init__(self):
-        super(Encoder, self).__init__()
+        super().__init__()
 
         self.vgg19 = vgg19(pretrained=True)
         self.vgg19 = self.vgg19.features[:-1]
@@ -17,6 +17,22 @@ class Encoder(nn.Module):
 
     def forward(self, image_batch: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         feature_maps = self.vgg19(image_batch)
-        # encode in order to pass to RNN h, c
-        initial_rnn = None
-        return feature_maps, initial_rnn
+        feature_mean = feature_maps.mean(dim=1)
+
+        return feature_maps, feature_mean
+
+
+class VisualAttention(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, X: torch.Tensor) -> torch.Tensor:
+        pass
+
+
+class LSTMDecoder(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, X: torch.Tensor) -> torch.Tensor:
+        pass

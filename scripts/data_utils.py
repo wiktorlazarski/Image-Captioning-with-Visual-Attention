@@ -7,9 +7,9 @@ from torchvision import transforms
 
 
 class DatasetType(Enum):
-    Train = 1
-    Validation = 2
-    Test = 3
+    TRAIN = 1
+    VALIDATION = 2
+    TEST = 3
 
 
 @dataclass
@@ -19,11 +19,11 @@ class CocoTrainingDatasetPaths:
 
 
 TRAINING_DATASET_PATHS: Dict[DatasetType, CocoTrainingDatasetPaths] = {
-    DatasetType.Train: CocoTrainingDatasetPaths(
-        images="./data/validation/train2017",
-        captions_json="./data/validation/captions_train2017.json",
+    DatasetType.TRAIN: CocoTrainingDatasetPaths(
+        images="./data/train/train2017",
+        captions_json="./data/train/captions_train2017.json",
     ),
-    DatasetType.Validation: CocoTrainingDatasetPaths(
+    DatasetType.VALIDATION: CocoTrainingDatasetPaths(
         images="./data/validation/val2017",
         captions_json="./data/validation/captions_val2017.json",
     ),
@@ -40,7 +40,7 @@ VGGNET_PREPROCESSING_PIPELINE = transforms.Compose(
 
 
 def load_dataset(
-    dataset_type: DatasetType = DatasetType.Train,
+    dataset_type: DatasetType = DatasetType.TRAIN,
     vgg_preprocessed: bool = False,
     text_preprocessed: bool = False,
 ) -> dset.CocoCaptions:
@@ -55,3 +55,6 @@ def load_dataset(
         transform=image_pipeline,
         target_transform=text_pipeline,
     )
+
+import torch
+torch.utils.data.DataLoader
