@@ -15,9 +15,16 @@ class VGG19Encoder(nn.Module):
         for param in self.vgg19.parameters():
             param.requires_grad = False
 
-    def forward(self, image_batch: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        feature_maps = self.vgg19(image_batch)
-        feature_mean = feature_maps.mean(dim=1)
+    def forward(self, image: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        feature_maps = self.vgg19(image)[0]
+        feature_mean = feature_maps.mean(dim=0)
+
+        flatten_dim = 1
+        for dim_size in feature_mean.shape:
+            flatten_dim *= dim_size
+
+        feature_maps = feature_maps.view(feature_maps.shape[0], flatten_dim)
+        feature_mean = feature_mean.view(flatten_dim)
 
         return feature_maps, feature_mean
 

@@ -1,4 +1,4 @@
-import scripts.data_utils as service
+import scripts.data_loading as dl
 import torch
 
 
@@ -8,7 +8,7 @@ def test_load_dataset() -> None:
     expected_out_tensor_dim = torch.Size([3, 224, 224])
 
     # when
-    dataset = service.load_dataset(service.DatasetType.Validation, vgg_preprocessed=True)
+    dataset = dl.load_dataset(service.DatasetType.Validation, vgg_preprocessed=True)
 
     # then
     assert len(dataset) == expected_size
