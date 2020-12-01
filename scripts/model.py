@@ -6,6 +6,8 @@ from torchvision.models import vgg19
 
 
 class VGG19Encoder(nn.Module):
+    "Image Encoder class maps images from pixel to feature space using Oxford VGG19 ConvNet."
+
     def __init__(self):
         super().__init__()
 
@@ -16,6 +18,15 @@ class VGG19Encoder(nn.Module):
             param.requires_grad = False
 
     def forward(self, image_batch: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Maps batch of images from pixel to feature space.
+
+        Args:
+            image_batch (torch.Tensor): Tensor of preprocessed images (batch_size, 3, 224, 224).
+
+        Returns:
+            Tuple[torch.Tensor, torch.Tensor]: Flatten feature maps (batch_size, 512, 196).
+                                               Feature maps mean (batch_size, 196).
+        """
         feature_maps = self.vgg19(image_batch)
         feature_mean = feature_maps.mean(dim=1)
 

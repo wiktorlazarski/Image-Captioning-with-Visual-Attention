@@ -10,6 +10,8 @@ from torchvision import datasets as dset
 
 
 class DatasetType(Enum):
+    """Dataset types used in project"""
+
     TRAIN = 1
     VALIDATION = 2
     TEST = 3
@@ -17,6 +19,8 @@ class DatasetType(Enum):
 
 @dataclass
 class CocoTrainingDatasetPaths:
+    """Paths to directories with data used for training Neural Net."""
+
     images: str
     captions_json: str
 
@@ -34,12 +38,21 @@ TRAINING_DATASET_PATHS: Dict[DatasetType, CocoTrainingDatasetPaths] = {
 
 
 class CocoCaptions(dset.VisionDataset):
+    """Class provides easy access to preprocessed data."""
+
     def __init__(
         self,
         dset_paths: CocoTrainingDatasetPaths,
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
     ):
+        """Constructor
+
+        Args:
+            dset_paths (CocoTrainingDatasetPaths): Path to image directory and json file with annotations
+            transform (Optional[Callable], optional): Image preprocessing pipeline. Defaults to None.
+            target_transform (Optional[Callable], optional): Text preprocessing pipeline. Defaults to None.
+        """
         super().__init__(
             root=dset_paths.images, transform=transform, target_transform=target_transform
         )
@@ -50,6 +63,14 @@ class CocoCaptions(dset.VisionDataset):
     def __getitem__(
         self, index: int
     ) -> Tuple[Union[Image.Image, torch.Tensor], Union[str, torch.Tensor]]:
+        """Provide access to dataset via index.
+
+        Args:
+            index (int): Index of sample.
+
+        Returns:
+            Tuple[Union[Image.Image, torch.Tensor], Union[str, torch.Tensor]]: Preprocessed or not image and target caption.
+        """
         image_id, caption = self.dataset[index]
 
         image = self._load_image(image_id)
@@ -65,6 +86,12 @@ class CocoCaptions(dset.VisionDataset):
         return len(self.dataset)
 
     def _sort_dataset_on_token_count(self) -> List[Tuple[int, str]]:
+        """Function which reorganized dataset by sorting data by number of tokens in captions.
+        Reorganization is done to increase training speed performance.
+
+        Returns:
+            List[Tuple[int, str]]: Image id and caption.
+        """
         num_tokens_groups: Dict[int, List[Tuple[int, int]]] = {}
 
         for image_id in self.coco.imgs:
