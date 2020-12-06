@@ -49,8 +49,13 @@ class VisualAttention(nn.Module):
 
 
 class LSTMDecoder(nn.Module):
-    def __init__(self):
+    def __init__(self, num_embeddings: int, embedding_dim: int):
         super().__init__()
+        self.word_embedding = nn.Embedding(num_embeddings, embedding_dim)
+
+    def forward(self, captions: torch.Tensor) -> torch.Tensor:
+        embeddings = self.word_embedding(captions)
+        return embeddings
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
         pass
