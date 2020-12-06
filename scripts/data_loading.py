@@ -125,6 +125,14 @@ class CocoCaptions(dset.VisionDataset):
         return sorted_dataset
 
     def _load_image(self, image_id: int) -> Image.Image:
+        """Load image from file.
+
+        Args:
+            image_id (int): Image id
+
+        Returns:
+            Image.Image: Image object
+        """
         img_filename = self.coco.loadImgs(image_id)[0]["file_name"]
         img_path = os.path.join(self.root, img_filename)
 
@@ -143,16 +151,19 @@ class CocoLoader(torch.utils.data.DataLoader):
     def _collate_fn(
         self, batch: Tuple[torch.Tensor, List[List[int]]]
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        try:
-            img_tensors = []
-            captions = []
-            for image, caption in batch:
-                img_tensors.append(image)
-                captions.append(caption)
+        """Preprocess batch of images and caption before presenting to model.
 
-            captions = self.dataset.target_transform.pad_sequences(captions)
-            return torch.stack(img_tensors), torch.IntTensor(captions)
-        except:
-            print(len(captions[0]))
-            print(len(captions[1]))
-            raise Exception()
+        Args:
+            batch (Tuple[torch.Tensor, List[List[int]]]): Images and captions
+
+        Returns:
+            Tuple[torch.Tensor, torch.Tensor]: Preprocessed batch.
+        """
+        img_tensors = []
+        captions = []
+        for image, caption in batch:
+            img_tensors.append(image)
+            captions.append(caption)
+
+        captions = self.dataset.target_transform.pad_sequences(captions)
+        return torch.stack(img_tensors), torch.IntTensor(captions)
