@@ -30,6 +30,18 @@ def test_idx2word(vocabulary: dp.Vocabulary) -> None:
     assert result == expected_result
 
 
+def test_idx2word_raises_index_error(vocabulary: dp.Vocabulary) -> None:
+    # given
+    index = -1
+    expected_message = "No word is mapped to -1"
+
+    # when / then
+    with pytest.raises(IndexError) as result:
+        vocabulary.idx2word(index)
+
+    assert str(result.value) == expected_message
+
+
 def test_word2idx(vocabulary: dp.Vocabulary) -> None:
     # given
     word = "a"
