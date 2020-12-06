@@ -1,6 +1,8 @@
-from typing import Dict, Tuple
+import string
+from typing import Dict, List, Tuple
 
 import pandas as pd
+import torch
 from torchvision import transforms
 
 VGGNET_PREPROCESSING_PIPELINE = transforms.Compose(
@@ -84,3 +86,41 @@ class Vocabulary:
         word2idx = dict(zip(idx2word.values(), idx2word.keys()))
 
         return idx2word, word2idx
+
+
+class TextPipeline:
+    """Text pipeline used by Dataset class in order to preprocess text"""
+
+    def __init__(self):
+        self.vocabulary = Vocabulary()
+
+    def __call__(self, text: str) -> List[int]:
+        """Preprocess text by one-hot encoding every token.
+        Moreover, add encoded '<SOS>'/'<EOS>' at the start/end of text.
+
+        Args:
+            text (str): Input text
+
+        Returns:
+            List[int]: Encoded text
+        """
+        tokens = self._normalize(text)
+
+        encoded_tokens = [self.vocabulary.word2idx("<SOS>")]
+
+        for token in tokens:
+            token_index = self.vocabulary.word2idx(token)
+            encoded_tokens.append(token_index)
+
+        encoded_tokens.append(self.vocabulary.word2idx("<EOS>"))
+
+        return encoded_tokens
+
+    def pad_sequences(self, sequences: List[List[int]]) -> torch.Tensor:
+        pass
+
+    def _normalize(self, text: str) -> List[str]:
+        text = text.lower()
+        text = text.translate(str.maketrans("", "", string.punctuation.replace("-", "")))
+
+        return text.split()

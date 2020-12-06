@@ -8,6 +8,8 @@ from PIL import Image
 from pycocotools.coco import COCO
 from torchvision import datasets as dset
 
+import scripts.data_preprocessing as dp
+
 
 class DatasetType(Enum):
     """Dataset types used in project"""
@@ -44,12 +46,12 @@ class CocoCaptions(dset.VisionDataset):
         self,
         dset_paths: CocoTrainingDatasetPaths,
         transform: Optional[Callable] = None,
-        target_transform: Optional[Callable] = None,
+        target_transform: Optional[dp.TextPipeline] = None,
     ):
         """Constructor
 
         Args:
-            dset_paths (CocoTrainingDatasetPaths): Path to image directory and json file with annotations
+            dset_paths (CocoTrainingDatasetPaths): Paths to image folder and json with annotations
             transform (Optional[Callable], optional): Image preprocessing pipeline. Defaults to None.
             target_transform (Optional[Callable], optional): Text preprocessing pipeline. Defaults to None.
         """
