@@ -1,6 +1,5 @@
 import pytest
 import scripts.data_loading as dl
-import torch
 
 
 @pytest.fixture

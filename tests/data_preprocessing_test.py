@@ -1,5 +1,6 @@
 import pytest
 import scripts.data_preprocessing as dp
+import torch
 
 
 @pytest.fixture
@@ -59,7 +60,7 @@ def test_word2idx(vocabulary: dp.Vocabulary) -> None:
     assert result == expected_result
 
 
-def test_word2idx_UNK(vocabulary: dp.Vocabulary) -> None:
+def test_word2idx_return_unknown_tag(vocabulary: dp.Vocabulary) -> None:
     # given
     word = "testnonexistingword"
     expected_result = vocabulary.word2idx("<UNK>")
@@ -88,3 +89,21 @@ def test_text_pipeline_preprocessing(text_pipeline: dp.TextPipeline) -> None:
 
     # then
     assert result == expected_result
+
+
+def test_pad_sequence(text_pipeline: dp.TextPipeline) -> None:
+    # given
+    pad_token_idx = text_pipeline.vocabulary.word2idx("<PAD>")
+    captions_batch = [[10000, 38, 329, 0, 958, 10001], [10000, 38, 329, 10001]]
+    expected_result = torch.IntTensor(
+        [
+            [10000, 38, 329, 0, 958, 10001],
+            [10000, 38, 329, 10001, pad_token_idx, pad_token_idx],
+        ]
+    )
+
+    # when
+    result = text_pipeline.pad_sequences(captions_batch)
+
+    # then
+    assert torch.all(torch.eq(result, expected_result))

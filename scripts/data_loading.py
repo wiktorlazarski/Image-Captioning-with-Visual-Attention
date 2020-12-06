@@ -64,7 +64,7 @@ class CocoCaptions(dset.VisionDataset):
 
     def __getitem__(
         self, index: int
-    ) -> Tuple[Union[Image.Image, torch.Tensor], Union[str, torch.Tensor]]:
+    ) -> Tuple[Union[Image.Image, torch.Tensor], Union[str, List[int]]]:
         """Provide access to dataset via index.
 
         Args:

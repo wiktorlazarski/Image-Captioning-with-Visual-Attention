@@ -117,7 +117,28 @@ class TextPipeline:
         return encoded_tokens
 
     def pad_sequences(self, sequences: List[List[int]]) -> torch.Tensor:
-        pass
+        """Pad list of encoded captions.
+
+        Args:
+            sequences (List[List[int]]): List of encoded captions.
+
+        Returns:
+            torch.Tensor: Tensor with target values.
+        """
+        captions_batch_len = len(sequences[0])
+
+        targets = [torch.IntTensor(sequences[0])]
+        for sequence in sequences[1:]:
+            if len(sequence) == captions_batch_len:
+                targets.append(torch.IntTensor(sequence))
+                continue
+
+            num_paddings = captions_batch_len - len(sequence)
+            sequence.extend([self.vocabulary.word2idx("<PAD>")] * num_paddings)
+
+            targets.append(torch.IntTensor(sequence))
+
+        return torch.stack(targets)
 
     def _normalize(self, text: str) -> List[str]:
         text = text.lower()
