@@ -126,3 +126,23 @@ class CocoCaptions(dset.VisionDataset):
         img_path = os.path.join(self.root, img_filename)
 
         return Image.open(img_path).convert("RGB")
+
+
+class CocoLoader(torch.utils.data.DataLoader):
+    def __init__(self, coco_dataset: CocoCaptions, batch_size: int, num_workers: int):
+        super().__init__(
+            dataset=coco_dataset,
+            batch_size=batch_size,
+            num_workers=num_workers,
+            collate_fn=self._collate_fn,
+        )
+
+    def _collate_fn(self, batch: Tuple[torch.Tensor, List[List[int]]]) -> Tuple[torch.Tensor, torch.Tensor]:
+        img_tensors = []
+        captions = []
+        for image, caption in batch:
+            img_tensors.append(image)
+            captions.append(caption)
+
+        captions = self.dataset.target_transform.pad_sequences(captions)
+        return torch.stack(img_tensors), torch.IntTensor(captions)

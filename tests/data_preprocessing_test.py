@@ -1,6 +1,5 @@
 import pytest
 import scripts.data_preprocessing as dp
-import torch
 
 
 @pytest.fixture
@@ -95,15 +94,13 @@ def test_pad_sequence(text_pipeline: dp.TextPipeline) -> None:
     # given
     pad_token_idx = text_pipeline.vocabulary.word2idx("<PAD>")
     captions_batch = [[10000, 38, 329, 0, 958, 10001], [10000, 38, 329, 10001]]
-    expected_result = torch.IntTensor(
-        [
-            [10000, 38, 329, 0, 958, 10001],
-            [10000, 38, 329, 10001, pad_token_idx, pad_token_idx],
-        ]
-    )
+    expected_result = [
+        [10000, 38, 329, 0, 958, 10001],
+        [10000, 38, 329, 10001, pad_token_idx, pad_token_idx],
+    ]
 
     # when
     result = text_pipeline.pad_sequences(captions_batch)
 
     # then
-    assert torch.all(torch.eq(result, expected_result))
+    assert result == expected_result
