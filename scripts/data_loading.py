@@ -61,6 +61,7 @@ class CocoCaptions(dset.VisionDataset):
 
         self.coco = COCO(dset_paths.captions_json)
         self.dataset = self._sort_dataset_on_token_count()
+        print("loaded")
 
     def __getitem__(
         self, index: int
@@ -108,7 +109,9 @@ class CocoCaptions(dset.VisionDataset):
 
             for caption in captions:
                 caption = caption.strip()
-                token_count = len(caption.split())
+                normalized_caption = dp.TextPipeline.normalize(caption)
+
+                token_count = len(normalized_caption.split())
 
                 if token_count not in num_tokens_groups.keys():
                     num_tokens_groups[token_count] = []
@@ -137,12 +140,19 @@ class CocoLoader(torch.utils.data.DataLoader):
             collate_fn=self._collate_fn,
         )
 
-    def _collate_fn(self, batch: Tuple[torch.Tensor, List[List[int]]]) -> Tuple[torch.Tensor, torch.Tensor]:
-        img_tensors = []
-        captions = []
-        for image, caption in batch:
-            img_tensors.append(image)
-            captions.append(caption)
+    def _collate_fn(
+        self, batch: Tuple[torch.Tensor, List[List[int]]]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        try:
+            img_tensors = []
+            captions = []
+            for image, caption in batch:
+                img_tensors.append(image)
+                captions.append(caption)
 
-        captions = self.dataset.target_transform.pad_sequences(captions)
-        return torch.stack(img_tensors), torch.IntTensor(captions)
+            captions = self.dataset.target_transform.pad_sequences(captions)
+            return torch.stack(img_tensors), torch.IntTensor(captions)
+        except:
+            print(len(captions[0]))
+            print(len(captions[1]))
+            raise Exception()

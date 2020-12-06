@@ -1,5 +1,6 @@
 import pytest
 import scripts.data_loading as dl
+import scripts.data_preprocessing as dp
 
 
 @pytest.fixture
@@ -27,6 +28,7 @@ def test_coco_dataset_sorted_by_captions(coco_dataset: dl.CocoCaptions) -> None:
     lengths = []
     for i in range(examine_first):
         _, caption = coco_dataset[i]
+        caption = dp.TextPipeline.normalize(caption)
         lengths.append(len(caption.split()))
 
     # then

@@ -2,7 +2,6 @@ import string
 from typing import Dict, List, Tuple
 
 import pandas as pd
-import torch
 from torchvision import transforms
 
 VGGNET_PREPROCESSING_PIPELINE = transforms.Compose(
@@ -91,6 +90,13 @@ class Vocabulary:
 class TextPipeline:
     """Text pipeline used by Dataset class in order to preprocess text"""
 
+    @staticmethod
+    def normalize(text: str) -> List[str]:
+        text = text.lower()
+        text = text.translate(str.maketrans("", "", string.punctuation.replace("-", "")))
+
+        return text
+
     def __init__(self):
         self.vocabulary = Vocabulary()
 
@@ -104,7 +110,7 @@ class TextPipeline:
         Returns:
             List[int]: Encoded text
         """
-        tokens = self._normalize(text)
+        tokens = TextPipeline.normalize(text).split()
 
         encoded_tokens = [self.vocabulary.word2idx("<SOS>")]
 
@@ -139,9 +145,3 @@ class TextPipeline:
             targets.append(sequence)
 
         return targets
-
-    def _normalize(self, text: str) -> List[str]:
-        text = text.lower()
-        text = text.translate(str.maketrans("", "", string.punctuation.replace("-", "")))
-
-        return text.split()
