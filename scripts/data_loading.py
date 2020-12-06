@@ -83,6 +83,11 @@ class CocoCaptions(dset.VisionDataset):
         return image, caption
 
     def __len__(self) -> int:
+        """Number of samples in dataset.
+
+        Returns:
+            int: Number of samples in dataset.
+        """
         return len(self.dataset)
 
     def _sort_dataset_on_token_count(self) -> List[Tuple[int, str]]:
