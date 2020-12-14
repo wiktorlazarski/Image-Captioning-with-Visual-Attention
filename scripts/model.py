@@ -40,7 +40,7 @@ class VGG19Encoder(nn.Module):
         return feature_maps, feature_mean
 
 
-class VisualAttention(nn.Module):
+class AdditiveAttention(nn.Module):
     def __init__(self):
         super().__init__()
 
@@ -49,10 +49,36 @@ class VisualAttention(nn.Module):
 
 
 class LSTMDecoder(nn.Module):
-    def __init__(self, num_embeddings: int, embedding_dim: int):
+    def __init__(
+        self,
+        num_embeddings: int,
+        embedding_dim: int,
+        encoder_dim: int,
+        decoder_dim: int,
+    ):
         super().__init__()
+
         self.word_embedding = nn.Embedding(num_embeddings, embedding_dim)
 
-    def forward(self, captions_batch: torch.Tensor) -> torch.Tensor:
-        embeddings = self.word_embedding(captions_batch)
-        return embeddings
+        self.init_h = nn.Linear(in_features=encoder_dim, out_features=decoder_dim)
+        self.init_c = nn.Linear(in_features=encoder_dim, out_features=decoder_dim)
+
+        self.lstm = nn.LSTMCell(embedding_dim + encoder_dim, decoder_dim)
+        self.attention = AdditiveAttention()
+
+    def forward(
+        self, feature_maps: torch.Tensor, feature_mean: torch.Tensor, caption_batch
+    ) -> torch.Tensor:
+        embeddings = self.word_embedding(caption_batch)  # (batch_size, caption_len, embeddings_dim)
+
+        h = self.init_h(feature_mean)  # (batch_size, decoder_dim)
+        c = self.init_c(feature_mean)  # (batch_size, decoder_dim)
+
+        for t in range(embeddings.shape[1]):
+            y_t = embeddings[:, t]  # (batch_size, embeddings_dim)
+
+            context = self.attention(feature_maps, h)  # (batch_size, encoder_dim)
+
+            h, c = self.lstm(torch.concat([y_t, context], dim=1), (h, c))
+
+        return y_t
