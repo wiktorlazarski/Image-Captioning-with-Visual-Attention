@@ -53,6 +53,6 @@ class LSTMDecoder(nn.Module):
         super().__init__()
         self.word_embedding = nn.Embedding(num_embeddings, embedding_dim)
 
-    def forward(self, captions: torch.Tensor) -> torch.Tensor:
-        embeddings = self.word_embedding(captions)
+    def forward(self, captions_batch: torch.Tensor) -> torch.Tensor:
+        embeddings = self.word_embedding(captions_batch)
         return embeddings
