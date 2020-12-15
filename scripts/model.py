@@ -2,6 +2,7 @@ from typing import Tuple
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torchvision.models import vgg19
 
 
@@ -41,11 +42,23 @@ class VGG19Encoder(nn.Module):
 
 
 class AdditiveAttention(nn.Module):
-    def __init__(self):
+    def __init__(self, attention_dim: int, values_dim: int, query_dim: int):
         super().__init__()
 
-    def forward(self, X: torch.Tensor) -> torch.Tensor:
-        pass
+        self.W_1 = nn.Linear(values_dim, attention_dim)
+        self.W_2 = nn.Linear(query_dim, attention_dim)
+        self.v = nn.Linear(attention_dim, 1)
+
+    def forward(self, values: torch.Tensor, query: torch.Tensor) -> torch.Tensor:
+        values_att = self.W_1(values)  # (batch_size, num_feature_maps, attention_dim)
+        query_att = self.W_2(query)  # (batch_size, attention_dim)
+
+        attention_scores = self.v(torch.tanh(values_att + query_att.unsqueeze(1)))  # (batch_size, num_feature_maps, 1)
+        attention_scores = F.softmax(attention_scores, dim=1)
+
+        context = (values * attention_scores).sum(dim=1)  # (batch_size, single_value_dim)
+
+        return context
 
 
 class LSTMDecoder(nn.Module):
@@ -55,6 +68,8 @@ class LSTMDecoder(nn.Module):
         embedding_dim: int,
         encoder_dim: int,
         decoder_dim: int,
+        attention_dim: int,
+        dropout: float = 0.5
     ):
         super().__init__()
 
@@ -64,7 +79,12 @@ class LSTMDecoder(nn.Module):
         self.init_c = nn.Linear(in_features=encoder_dim, out_features=decoder_dim)
 
         self.lstm = nn.LSTMCell(embedding_dim + encoder_dim, decoder_dim)
-        self.attention = AdditiveAttention()
+        self.attention = AdditiveAttention(
+            attention_dim=attention_dim, values_dim=encoder_dim, query_dim=decoder_dim
+        )
+
+        self.dropout = nn.Dropout(p=dropout)
+        self.output_layer = nn.Linear(in_features=decoder_dim, out_features=num_embeddings)
 
     def forward(
         self, feature_maps: torch.Tensor, feature_mean: torch.Tensor, caption_batch
@@ -74,11 +94,21 @@ class LSTMDecoder(nn.Module):
         h = self.init_h(feature_mean)  # (batch_size, decoder_dim)
         c = self.init_c(feature_mean)  # (batch_size, decoder_dim)
 
-        for t in range(embeddings.shape[1]):
-            y_t = embeddings[:, t]  # (batch_size, embeddings_dim)
+        predictions = []
+        contexts = []
 
-            context = self.attention(feature_maps, h)  # (batch_size, encoder_dim)
+        caption_len = embeddings.shape[1]
+        for t in range(caption_len - 1):
+            embeddings_t = embeddings[:, t]  # (batch_size, embeddings_dim)
 
-            h, c = self.lstm(torch.concat([y_t, context], dim=1), (h, c))
+            z = self.attention(feature_maps, h)  # (batch_size, encoder_dim)
+            contexts.append(z)
 
-        return y_t
+            h, c = self.lstm(torch.cat([embeddings_t, z], dim=1), (h, c))
+
+            pred = self.output_layer(self.dropout(h))
+            pred = F.softmax(pred, dim=1)
+
+            predictions.append(pred)
+
+        return torch.stack(predictions), contexts
