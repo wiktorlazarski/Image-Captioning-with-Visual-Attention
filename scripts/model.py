@@ -42,6 +42,8 @@ class VGG19Encoder(nn.Module):
 
 
 class AdditiveAttention(nn.Module):
+    """Computes Additive/Bahdanau attention."""
+
     def __init__(self, attention_dim: int, values_dim: int, query_dim: int):
         super().__init__()
 
@@ -50,6 +52,15 @@ class AdditiveAttention(nn.Module):
         self.v = nn.Linear(attention_dim, 1)
 
     def forward(self, values: torch.Tensor, query: torch.Tensor) -> torch.Tensor:
+        """Output context vector.
+
+        Args:
+            values (torch.Tensor): Flatten feature maps (batch_size, num_feature_maps, feature_map_dim).
+            query (torch.Tensor): LSTM decoder output (batch_size, decoder_dim)
+
+        Returns:
+            torch.Tensor: Context vector (batch_size, feature_map_dim)
+        """
         values_att = self.W_1(values)
         query_att = self.W_2(query)
 
@@ -62,6 +73,8 @@ class AdditiveAttention(nn.Module):
 
 
 class LSTMDecoder(nn.Module):
+    """Long Short Term Memory decoder with Additive Attention."""
+
     def __init__(
         self,
         num_embeddings: int,
@@ -69,8 +82,18 @@ class LSTMDecoder(nn.Module):
         encoder_dim: int,
         decoder_dim: int,
         attention_dim: int,
-        dropout: float = 0.5
+        dropout: float = 0.5,
     ):
+        """Constructor
+
+        Args:
+            num_embeddings (int): vocabulary size
+            embedding_dim (int): word embedding dimension
+            encoder_dim (int): encoder output of flatten feature mean dimension
+            decoder_dim (int): decoder output dimension
+            attention_dim (int): additive attention internal dimension
+            dropout (float, optional): decoder output dropout. Defaults to 0.5.
+        """
         super().__init__()
 
         self.word_embedding = nn.Embedding(num_embeddings, embedding_dim)
@@ -90,8 +113,19 @@ class LSTMDecoder(nn.Module):
         self.output_layer = nn.Linear(in_features=embedding_dim, out_features=num_embeddings)
 
     def forward(
-        self, feature_maps: torch.Tensor, feature_mean: torch.Tensor, caption_batch
-    ) -> torch.Tensor:
+        self, feature_maps: torch.Tensor, feature_mean: torch.Tensor, caption_batch: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Decoder forward pass.
+
+        Args:
+            feature_maps (torch.Tensor): Flatten feature maps (batch_size, num_feature_maps, feature_map_dim).
+            feature_mean (torch.Tensor): Flatten feature maps mean (batch_size, feature_map_dim).
+            caption_batch ([type]): Image captions (batch_size, caption_len, token_index)
+
+        Returns:
+            Tuple[torch.Tensor, torch.Tensor]: Prediction at each time step (time_step, batch_size, vocabulary_size)
+                                               Context vectors for each prediction (time_step, batch_size, encoder_dim)
+        """
         embeddings = self.word_embedding(caption_batch)
 
         h = self.init_h(feature_mean)
