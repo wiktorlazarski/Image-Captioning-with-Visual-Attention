@@ -50,13 +50,13 @@ class AdditiveAttention(nn.Module):
         self.v = nn.Linear(attention_dim, 1)
 
     def forward(self, values: torch.Tensor, query: torch.Tensor) -> torch.Tensor:
-        values_att = self.W_1(values)  # (batch_size, num_feature_maps, attention_dim)
-        query_att = self.W_2(query)  # (batch_size, attention_dim)
+        values_att = self.W_1(values)
+        query_att = self.W_2(query)
 
-        attention_scores = self.v(torch.tanh(values_att + query_att.unsqueeze(1)))  # (batch_size, num_feature_maps, 1)
+        attention_scores = self.v(torch.tanh(values_att + query_att.unsqueeze(1)))
         attention_scores = F.softmax(attention_scores, dim=1)
 
-        context = (values * attention_scores).sum(dim=1)  # (batch_size, single_value_dim)
+        context = (values * attention_scores).sum(dim=1)
 
         return context
 
@@ -84,31 +84,36 @@ class LSTMDecoder(nn.Module):
         )
 
         self.dropout = nn.Dropout(p=dropout)
-        self.output_layer = nn.Linear(in_features=decoder_dim, out_features=num_embeddings)
+
+        self.hidden_fc = nn.Linear(in_features=decoder_dim, out_features=embedding_dim)
+        self.context_fc = nn.Linear(in_features=encoder_dim, out_features=embedding_dim)
+        self.output_layer = nn.Linear(in_features=embedding_dim, out_features=num_embeddings)
 
     def forward(
         self, feature_maps: torch.Tensor, feature_mean: torch.Tensor, caption_batch
     ) -> torch.Tensor:
-        embeddings = self.word_embedding(caption_batch)  # (batch_size, caption_len, embeddings_dim)
+        embeddings = self.word_embedding(caption_batch)
 
-        h = self.init_h(feature_mean)  # (batch_size, decoder_dim)
-        c = self.init_c(feature_mean)  # (batch_size, decoder_dim)
+        h = self.init_h(feature_mean)
+        c = self.init_c(feature_mean)
 
         predictions = []
         contexts = []
 
         caption_len = embeddings.shape[1]
-        for t in range(caption_len - 1):
-            embeddings_t = embeddings[:, t]  # (batch_size, embeddings_dim)
+        for time_step in range(caption_len - 1):
+            embeddings_t = embeddings[:, time_step]
 
-            z = self.attention(feature_maps, h)  # (batch_size, encoder_dim)
+            z = self.attention(feature_maps, h)
             contexts.append(z)
 
             h, c = self.lstm(torch.cat([embeddings_t, z], dim=1), (h, c))
 
-            pred = self.output_layer(self.dropout(h))
-            pred = F.softmax(pred, dim=1)
+            out = embeddings_t + self.hidden_fc(self.dropout(h)) + self.context_fc(z)
 
-            predictions.append(pred)
+            preds = self.output_layer(out)
+            preds = F.softmax(preds, dim=1)
 
-        return torch.stack(predictions), contexts
+            predictions.append(preds)
+
+        return torch.stack(predictions), torch.stack(contexts)
