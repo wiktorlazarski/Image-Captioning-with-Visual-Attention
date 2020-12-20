@@ -40,7 +40,7 @@ def test_vgg_encoder_output_dim(train_batch: Tuple[torch.Tensor, torch.Tensor]) 
     assert feature_mean.shape == expected_feature_mean_dim
 
 
-def test_decoder_word_embeddings(train_batch: Tuple[torch.Tensor, torch.Tensor]) -> None:
+def test_decoder_word_embeddings_output_dim(train_batch: Tuple[torch.Tensor, torch.Tensor]) -> None:
     # given
     _, caption_batch = train_batch
     batch_size = len(caption_batch)
@@ -64,6 +64,28 @@ def test_decoder_word_embeddings(train_batch: Tuple[torch.Tensor, torch.Tensor])
     assert embeddings.shape == expected_word_embedding_out_dim
 
 
+def test_attention_output_dim(train_batch: Tuple[torch.Tensor, torch.Tensor]) -> None:
+    # given
+    image_batch, _ = train_batch
+    feature_maps, _ = mdl.VGG19Encoder().forward(image_batch)
+
+    batch_size = len(image_batch)
+    mock_h = torch.rand((batch_size, 16))
+
+    feature_dim = feature_maps.shape[-1]
+    attention = mdl.AdditiveAttention(attention_dim=10, values_dim=feature_dim, query_dim=16)
+
+    expected_attention_dim = torch.Size((batch_size, feature_dim))
+    expected_alphas_dim = torch.Size((batch_size, 512))
+
+    # when
+    context, alphas = attention.forward(feature_maps, mock_h)
+
+    # then
+    assert context.shape == expected_attention_dim
+    assert alphas.shape == expected_alphas_dim
+
+
 def test_decoder_output_dim(train_batch: Tuple[torch.Tensor, torch.Tensor]) -> None:
     # given
     image_batch, caption_batch = train_batch
@@ -77,31 +99,15 @@ def test_decoder_output_dim(train_batch: Tuple[torch.Tensor, torch.Tensor]) -> N
 
     expected_prediction_dim = torch.Size((caption_len - 1, batch_size, 10_004))
     expected_context_dim = torch.Size((caption_len - 1, batch_size, 196))
+    expected_attention_scores_dim = torch.Size((caption_len - 1, batch_size, 512))
 
     # when
     with torch.no_grad():
-        predictions, contexts = decoder.forward(*encoder.forward(image_batch), caption_batch)
+        predictions, contexts, attention_scores = decoder.forward(
+            *encoder.forward(image_batch), caption_batch
+        )
 
         # then
         assert predictions.shape == expected_prediction_dim
         assert contexts.shape == expected_context_dim
-
-
-def test_attention_output_dim(train_batch: Tuple[torch.Tensor, torch.Tensor]) -> None:
-    # given
-    image_batch, _ = train_batch
-    feature_maps, _ = mdl.VGG19Encoder().forward(image_batch)
-
-    batch_size = len(image_batch)
-    mock_h = torch.rand((batch_size, 16))
-
-    feature_dim = feature_maps.shape[-1]
-    attention = mdl.AdditiveAttention(attention_dim=10, values_dim=feature_dim, query_dim=16)
-
-    expected_attention_dim = torch.Size((batch_size, feature_dim))
-
-    # when
-    context = attention.forward(feature_maps, mock_h)
-
-    # then
-    assert context.shape == expected_attention_dim
+        assert attention_scores.shape == expected_attention_scores_dim

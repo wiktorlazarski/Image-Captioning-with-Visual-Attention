@@ -51,7 +51,7 @@ class AdditiveAttention(nn.Module):
         self.W_2 = nn.Linear(query_dim, attention_dim)
         self.v = nn.Linear(attention_dim, 1)
 
-    def forward(self, values: torch.Tensor, query: torch.Tensor) -> torch.Tensor:
+    def forward(self, values: torch.Tensor, query: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Output context vector.
 
         Args:
@@ -69,7 +69,7 @@ class AdditiveAttention(nn.Module):
 
         context = (values * attention_scores).sum(dim=1)
 
-        return context
+        return context, attention_scores.squeeze(-1)
 
 
 class LSTMDecoder(nn.Module):
@@ -114,7 +114,7 @@ class LSTMDecoder(nn.Module):
 
     def forward(
         self, feature_maps: torch.Tensor, feature_mean: torch.Tensor, caption_batch: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Decoder forward pass.
 
         Args:
@@ -125,6 +125,11 @@ class LSTMDecoder(nn.Module):
         Returns:
             Tuple[torch.Tensor, torch.Tensor]: Prediction at each time step (time_step, batch_size, vocabulary_size)
                                                Context vectors for each prediction (time_step, batch_size, encoder_dim)
+
+        Returns:
+            Tuple[torch.Tensor, torch.Tensor, torch.Tensor]: Prediction at each time step (time_step, batch_size, vocabulary_size)
+                                                             Context vectors for each prediction (time_step, batch_size, encoder_dim)
+                                                             Attention scores (time_step, batch_size, num_feature_maps)
         """
         embeddings = self.word_embedding(caption_batch)
 
@@ -133,21 +138,30 @@ class LSTMDecoder(nn.Module):
 
         predictions = []
         contexts = []
+        attention_scores = []
 
         caption_len = embeddings.shape[1]
         for time_step in range(caption_len - 1):
             embeddings_t = embeddings[:, time_step]
 
-            z = self.attention(feature_maps, h)
+            z, alphas = self.attention(feature_maps, h)
             contexts.append(z)
+            attention_scores.append(alphas)
 
             h, c = self.lstm(torch.cat([embeddings_t, z], dim=1), (h, c))
 
             out = embeddings_t + self.hidden_fc(self.dropout(h)) + self.context_fc(z)
 
             preds = self.output_layer(out)
-            preds = F.softmax(preds, dim=1)
 
             predictions.append(preds)
 
-        return torch.stack(predictions), torch.stack(contexts)
+        return torch.stack(predictions), torch.stack(contexts), torch.stack(attention_scores)
+
+
+class DoublyStochasticAttentionLoss(nn.CrossEntropyLoss):
+    def __init__():
+        pass
+
+    def forward(self, X: torch.Tensor) -> float:
+        pass
