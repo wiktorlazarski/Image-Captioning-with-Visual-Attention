@@ -64,14 +64,14 @@ class CocoCaptions(dset.VisionDataset):
 
     def __getitem__(
         self, index: int
-    ) -> Tuple[Union[Image.Image, torch.Tensor], Union[str, List[int]]]:
+    ) -> Tuple[Union[Image.Image, torch.tensor], Union[str, List[int]]]:
         """Provide access to dataset via index.
 
         Args:
             index (int): Index of sample.
 
         Returns:
-            Tuple[Union[Image.Image, torch.Tensor], Union[str, torch.Tensor]]: Preprocessed or not image and target caption.
+            Tuple[Union[Image.Image, torch.tensor], Union[str, torch.tensor]]: Preprocessed or not image and target caption.
         """
         image_id, caption = self.dataset[index]
 
@@ -148,15 +148,15 @@ class CocoLoader(torch.utils.data.DataLoader):
         )
 
     def _collate_fn(
-        self, batch: Tuple[torch.Tensor, List[List[int]]]
-    ) -> Tuple[torch.Tensor, torch.LongTensor]:
+        self, batch: Tuple[torch.tensor, List[List[int]]]
+    ) -> Tuple[torch.tensor, torch.LongTensor]:
         """Preprocess batch of images and caption before presenting to model.
 
         Args:
-            batch (Tuple[torch.Tensor, List[List[int]]]): Images and captions
+            batch (Tuple[torch.tensor, List[List[int]]]): Images and captions
 
         Returns:
-            Tuple[torch.Tensor, torch.Tensor]: Preprocessed batch.
+            Tuple[torch.tensor, torch.tensor]: Preprocessed batch.
         """
         img_tensors = []
         captions = []

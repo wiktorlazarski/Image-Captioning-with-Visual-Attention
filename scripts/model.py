@@ -17,14 +17,14 @@ class VGG19Encoder(nn.Module):
         for param in self.vgg19.parameters():
             param.requires_grad = False
 
-    def forward(self, image_batch: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, image_batch: torch.tensor) -> Tuple[torch.tensor, torch.tensor]:
         """Maps batch of images from pixel to feature space.
 
         Args:
-            image_batch (torch.Tensor): Tensor of preprocessed images (batch_size, 3, 224, 224).
+            image_batch (torch.tensor): tensor of preprocessed images (batch_size, 3, 224, 224).
 
         Returns:
-            Tuple[torch.Tensor, torch.Tensor]: Flatten feature maps (batch_size, 512, 196).
+            Tuple[torch.tensor, torch.tensor]: Flatten feature maps (batch_size, 512, 196).
                                                Feature maps mean (batch_size, 196).
         """
         feature_maps = self.vgg19(image_batch)
@@ -50,16 +50,18 @@ class AdditiveAttention(nn.Module):
         self.W_2 = nn.Linear(query_dim, attention_dim)
         self.v = nn.Linear(attention_dim, 1)
 
-    def forward(self, values: torch.Tensor, query: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(
+        self, values: torch.tensor, query: torch.tensor
+    ) -> Tuple[torch.tensor, torch.tensor]:
         """Output context vector.
 
         Args:
-            values (torch.Tensor): Flatten feature maps (batch_size, num_feature_maps, feature_map_dim).
-            query (torch.Tensor): LSTM decoder output (batch_size, decoder_dim)
+            values (torch.tensor): Flatten feature maps (batch_size, num_feature_maps, feature_map_dim).
+            query (torch.tensor): LSTM decoder output (batch_size, decoder_dim)
 
         Returns:
-            torch.Tensor: Context vector (batch_size, feature_map_dim)
-            torch.Tensor: Attention scores (batch_size, num_feature_maps)
+            torch.tensor: Context vector (batch_size, feature_map_dim)
+            torch.tensor: Attention scores (batch_size, num_feature_maps)
         """
         values_att = self.W_1(values)
         query_att = self.W_2(query)
@@ -115,21 +117,21 @@ class LSTMDecoder(nn.Module):
         self.output_layer = nn.Linear(in_features=embedding_dim, out_features=num_embeddings)
 
     def forward(
-        self, feature_maps: torch.Tensor, feature_mean: torch.Tensor, caption_batch: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        self, feature_maps: torch.tensor, feature_mean: torch.tensor, caption_batch: torch.tensor
+    ) -> Tuple[torch.tensor, torch.tensor, torch.tensor]:
         """Decoder forward pass.
 
         Args:
-            feature_maps (torch.Tensor): Flatten feature maps (batch_size, num_feature_maps, feature_map_dim).
-            feature_mean (torch.Tensor): Flatten feature maps mean (batch_size, feature_map_dim).
+            feature_maps (torch.tensor): Flatten feature maps (batch_size, num_feature_maps, feature_map_dim).
+            feature_mean (torch.tensor): Flatten feature maps mean (batch_size, feature_map_dim).
             caption_batch ([type]): Image captions (batch_size, caption_len, token_index)
 
         Returns:
-            Tuple[torch.Tensor, torch.Tensor]: Prediction at each time step (time_step, batch_size, vocabulary_size)
+            Tuple[torch.tensor, torch.tensor]: Prediction at each time step (time_step, batch_size, vocabulary_size)
                                                Context vectors for each prediction (time_step, batch_size, encoder_dim)
 
         Returns:
-            Tuple[torch.Tensor, torch.Tensor, torch.Tensor]: Prediction at each time step (time_step, batch_size, vocabulary_size)
+            Tuple[torch.tensor, torch.tensor, torch.tensor]: Prediction at each time step (time_step, batch_size, vocabulary_size)
                                                              Context vectors for each prediction (time_step, batch_size, encoder_dim)
                                                              Attention scores (time_step, batch_size, num_feature_maps)
         """
@@ -163,11 +165,3 @@ class LSTMDecoder(nn.Module):
             predictions.append(preds)
 
         return torch.stack(predictions), torch.stack(contexts), torch.stack(attention_scores)
-
-
-class DoublyStochasticAttentionLoss(nn.CrossEntropyLoss):
-    def __init__():
-        pass
-
-    def forward(self, X: torch.Tensor) -> float:
-        pass
