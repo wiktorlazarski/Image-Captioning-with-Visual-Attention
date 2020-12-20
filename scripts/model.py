@@ -2,7 +2,6 @@ from typing import Tuple
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torchvision.models import vgg19
 
 
@@ -60,12 +59,13 @@ class AdditiveAttention(nn.Module):
 
         Returns:
             torch.Tensor: Context vector (batch_size, feature_map_dim)
+            torch.Tensor: Attention scores (batch_size, num_feature_maps)
         """
         values_att = self.W_1(values)
         query_att = self.W_2(query)
 
         attention_scores = self.v(torch.tanh(values_att + query_att.unsqueeze(1)))
-        attention_scores = F.softmax(attention_scores, dim=1)
+        attention_scores = torch.softmax(attention_scores, dim=1)
 
         context = (values * attention_scores).sum(dim=1)
 
@@ -106,6 +106,8 @@ class LSTMDecoder(nn.Module):
             attention_dim=attention_dim, values_dim=encoder_dim, query_dim=decoder_dim
         )
 
+        self.beta_fc = nn.Linear(in_features=decoder_dim, out_features=1)
+
         self.dropout = nn.Dropout(p=dropout)
 
         self.hidden_fc = nn.Linear(in_features=decoder_dim, out_features=embedding_dim)
@@ -145,6 +147,10 @@ class LSTMDecoder(nn.Module):
             embeddings_t = embeddings[:, time_step]
 
             z, alphas = self.attention(feature_maps, h)
+
+            beta = torch.sigmoid(self.beta_fc(h))
+            z = z * beta
+
             contexts.append(z)
             attention_scores.append(alphas)
 
