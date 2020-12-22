@@ -2,7 +2,7 @@ from typing import Tuple
 
 import pytest
 import scripts.data_loading as dl
-import scripts.data_preprocessing as dp
+import scripts.data_processing as dp
 import torch
 from scripts import model
 

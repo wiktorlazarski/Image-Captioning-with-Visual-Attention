@@ -1,5 +1,5 @@
 import pytest
-import scripts.data_preprocessing as dp
+import scripts.data_processing as dp
 
 
 @pytest.fixture

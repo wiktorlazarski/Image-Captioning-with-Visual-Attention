@@ -8,7 +8,7 @@ from PIL import Image
 from pycocotools.coco import COCO
 from torchvision import datasets as dset
 
-import scripts.data_preprocessing as dp
+import scripts.data_processing as dp
 
 
 class DatasetType(Enum):

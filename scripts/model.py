@@ -124,7 +124,7 @@ class LSTMDecoder(nn.Module):
         Args:
             feature_maps (torch.tensor): Flatten feature maps (batch_size, num_feature_maps, feature_map_dim).
             feature_mean (torch.tensor): Flatten feature maps mean (batch_size, feature_map_dim).
-            caption_batch ([type]): Image captions (batch_size, caption_len, token_index)
+            caption_batch (torch.tensor): Image captions (batch_size, caption_len)
 
         Returns:
             Tuple[torch.tensor, torch.tensor]: Prediction at each time step (time_step, batch_size, vocabulary_size)
