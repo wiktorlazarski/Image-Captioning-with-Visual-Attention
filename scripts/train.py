@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 
+from scripts import model
+
 
 class DoublyStochasticAttentionLoss(nn.CrossEntropyLoss):
     """Computes loss function for double stochastic attention model."""
@@ -34,4 +36,3 @@ class Trainer:
 
     def train() -> None:
         pass
-
