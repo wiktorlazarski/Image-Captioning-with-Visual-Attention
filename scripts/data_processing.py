@@ -17,7 +17,7 @@ VGGNET_PREPROCESSING_PIPELINE = transforms.Compose(
 class Vocabulary:
     """Vocabulary class which maps tokens' indexes and words"""
 
-    COCO_CAPTION_TOP10K_WORDS = "./resources/text/vocabulary_10k.csv"
+    COCO_CAPTION_TOP10K_WORDS = "./assets/text/vocabulary_10k.csv"
     SPECIAL_TOKENS = ["<SOS>", "<EOS>", "<UNK>", "<PAD>"]
 
     def __init__(self, path: str = COCO_CAPTION_TOP10K_WORDS):
