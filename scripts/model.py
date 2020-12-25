@@ -118,7 +118,7 @@ class LSTMDecoder(nn.Module):
 
     def forward(
         self, feature_maps: torch.tensor, feature_mean: torch.tensor, caption_batch: torch.tensor
-    ) -> Tuple[torch.tensor, torch.tensor, torch.tensor]:
+    ) -> Tuple[torch.tensor, torch.tensor]:
         """Decoder forward pass.
 
         Args:
@@ -141,7 +141,6 @@ class LSTMDecoder(nn.Module):
         c = self.init_c(feature_mean)
 
         predictions = []
-        contexts = []
         attention_scores = []
 
         caption_len = embeddings.shape[1]
@@ -153,7 +152,6 @@ class LSTMDecoder(nn.Module):
             beta = torch.sigmoid(self.beta_fc(h))
             z = z * beta
 
-            contexts.append(z)
             attention_scores.append(alphas)
 
             h, c = self.lstm(torch.cat([embeddings_t, z], dim=1), (h, c))
@@ -164,4 +162,4 @@ class LSTMDecoder(nn.Module):
 
             predictions.append(preds)
 
-        return torch.stack(predictions), torch.stack(contexts), torch.stack(attention_scores)
+        return torch.stack(predictions), torch.stack(attention_scores)

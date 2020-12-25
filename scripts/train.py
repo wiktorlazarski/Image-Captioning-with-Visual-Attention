@@ -1,6 +1,15 @@
+import contextlib
+import math
+import os
+from typing import Generator
+
 import torch
 import torch.nn as nn
+from torch.utils import tensorboard as tb
+from torchvision import transforms
 
+import scripts.data_loading as dl
+import scripts.data_processing as dp
 from scripts import model
 
 
@@ -12,27 +21,128 @@ class DoublyStochasticAttentionLoss(nn.CrossEntropyLoss):
 
         self.hyperparameter_lambda = hyperparameter_lambda
 
-    def forward(self, y_preds: torch.tensor, y_true: torch.tensor, alphas: torch.tensor) -> float:
+    def forward(self, y_pred: torch.tensor, y_true: torch.tensor, alphas: torch.tensor) -> float:
         """Computes loss function for double stochastic attention model.
 
         Args:
-            y_preds (torch.tensor): predictions for every time step (time_step, batch_size, vocabulary_size)
-            y_true (torch.tensor): true prediction for every time step (time_step, batch_size)
+            y_pred (torch.tensor): predictions for every time step (time_step * batch_size, vocabulary_size)
+            y_true (torch.tensor): true prediction for every time step (time_step * batch_size)
             alphas (torch.tensor): attention scores produced for every prediction (time_step, batch_size, num_feature_maps)
 
         Returns:
             float: loss value
         """
-        loss = super().forward(y_preds, y_true)
-
+        loss = super().forward(y_pred, y_true)
+        print(loss)
         loss += self.hyperparameter_lambda * ((1 - alphas.sum(dim=0)) ** 2).sum(dim=1).mean()
 
         return loss
 
 
 class Trainer:
-    def __init__(self, parameters):
-        pass
+    @staticmethod
+    @contextlib.contextmanager
+    def tensorboard(comment: str) -> Generator[tb.SummaryWriter, None, None]:
+        writer = tb.SummaryWriter(comment=comment)
+        try:
+            yield writer
+        finally:
+            writer.close()
 
-    def train() -> None:
-        pass
+    def __init__(
+        self,
+        coco_train_paths: dl.CocoTrainingDatasetPaths = dl.TRAINING_DATASET_PATHS[dl.DatasetType.TRAIN],
+        coco_val_paths: dl.CocoTrainingDatasetPaths = dl.TRAINING_DATASET_PATHS[dl.DatasetType.VALIDATION],
+        image_pipeline: transforms.transforms = dp.VGGNET_PREPROCESSING_PIPELINE,
+        caption_pipeline: dp.TextPipeline = dp.TextPipeline(),
+        checkpoint_dir: str = "./checkpoints",
+    ):
+        self.coco_train = dl.CocoCaptions(
+            dset_paths=coco_train_paths,
+            transform=image_pipeline,
+            target_transform=caption_pipeline,
+        )
+
+        self.num_embeddings = len(self.coco_train.target_transform.vocabulary)
+        self.encoder_dim = 196
+
+        self.encoder = model.VGG19Encoder()
+
+        self.checkpoint_dir = checkpoint_dir
+
+    def train(
+        self,
+        batch_size: int,
+        learning_rate: float,
+        loss_lambda: float,
+        embedding_dim: int,
+        decoder_dim: int,
+        attention_dim: int,
+        dropout: float = 0.5,
+    ) -> None:
+        comment = f"_batch_size={batch_size}_lr={learning_rate}"
+
+        with Trainer.tensorboard(comment=comment) as tb:
+            data_loader = dl.CocoLoader(
+                self.coco_train, batch_size=batch_size, num_workers=math.ceil(os.cpu_count() / 2)
+            )
+
+            decoder = model.LSTMDecoder(
+                num_embeddings=self.num_embeddings,
+                embedding_dim=embedding_dim,
+                encoder_dim=self.encoder_dim,
+                decoder_dim=decoder_dim,
+                attention_dim=attention_dim,
+                dropout=dropout,
+            )
+
+            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+            self.encoder.to(device)
+            decoder.to(device)
+            decoder.train()
+
+            optimizer = torch.optim.Adam(params=decoder.parameters(), lr=learning_rate)
+            criterion = DoublyStochasticAttentionLoss(loss_lambda).to(device)
+
+            for epoch in range(1):
+                running_loss = 0.0
+
+                for batch_idx, batch in enumerate(data_loader):
+                    images, captions = batch[0].to(device), batch[1].to(device)
+
+                    optimizer.zero_grad()
+
+                    predictions, attentions = decoder(*self.encoder(images), captions)
+
+                    caption_len = captions.shape[1] - 1
+                    loss = criterion(
+                        predictions.reshape(caption_len * batch_size, self.num_embeddings),
+                        captions[:, 1:].reshape(caption_len * batch_size),
+                        attentions,
+                    )
+
+                    loss.backward()
+                    optimizer.step()
+
+                    running_loss += loss.item()
+                    if batch_idx % 25 == 0 and batch_idx != 0:
+                        tb.add_scalar("loss", running_loss / 25.0, batch_idx)
+                        print(f"Batch {batch_idx} => {running_loss}")
+                        running_loss = 0.0
+
+                break
+
+
+if __name__ == "__main__":
+    trainer = Trainer()
+    learning_rate = 0.0005
+
+    trainer.train(
+        batch_size=16,
+        learning_rate=learning_rate,
+        loss_lambda=0.1,
+        embedding_dim=32,
+        decoder_dim=128,
+        attention_dim=256,
+    )

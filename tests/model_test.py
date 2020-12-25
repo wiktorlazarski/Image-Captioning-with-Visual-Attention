@@ -94,16 +94,14 @@ def test_decoder_output_dim(train_batch: Tuple[torch.tensor, torch.tensor]) -> N
     )
 
     expected_prediction_dim = torch.Size((caption_len - 1, batch_size, 10_004))
-    expected_context_dim = torch.Size((caption_len - 1, batch_size, 196))
     expected_attention_scores_dim = torch.Size((caption_len - 1, batch_size, 512))
 
     # when
     with torch.no_grad():
-        predictions, contexts, attention_scores = decoder.forward(
+        predictions, attention_scores = decoder.forward(
             *encoder.forward(image_batch), caption_batch
         )
 
         # then
         assert predictions.shape == expected_prediction_dim
-        assert contexts.shape == expected_context_dim
         assert attention_scores.shape == expected_attention_scores_dim
