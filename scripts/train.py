@@ -33,7 +33,7 @@ class DoublyStochasticAttentionLoss(nn.CrossEntropyLoss):
             float: loss value
         """
         loss = super().forward(y_pred, y_true)
-        print(loss)
+
         loss += self.hyperparameter_lambda * ((1 - alphas.sum(dim=0)) ** 2).sum(dim=1).mean()
 
         return loss
