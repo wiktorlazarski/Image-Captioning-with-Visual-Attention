@@ -46,8 +46,8 @@ class AdditiveAttention(nn.Module):
     def __init__(self, attention_dim: int, values_dim: int, query_dim: int):
         super().__init__()
 
-        self.W_1 = nn.Linear(values_dim, attention_dim)
-        self.W_2 = nn.Linear(query_dim, attention_dim)
+        self.W_1 = nn.Linear(in_features=values_dim, out_features=attention_dim)
+        self.W_2 = nn.Linear(in_features=query_dim, out_features=attention_dim)
         self.v = nn.Linear(attention_dim, 1)
 
     def forward(
@@ -128,12 +128,7 @@ class LSTMDecoder(nn.Module):
 
         Returns:
             Tuple[torch.tensor, torch.tensor]: Prediction at each time step (time_step, batch_size, vocabulary_size)
-                                               Context vectors for each prediction (time_step, batch_size, encoder_dim)
-
-        Returns:
-            Tuple[torch.tensor, torch.tensor, torch.tensor]: Prediction at each time step (time_step, batch_size, vocabulary_size)
-                                                             Context vectors for each prediction (time_step, batch_size, encoder_dim)
-                                                             Attention scores (time_step, batch_size, num_feature_maps)
+                                               Attention scores (time_step, batch_size, num_feature_maps)
         """
         embeddings = self.word_embedding(caption_batch)
 
