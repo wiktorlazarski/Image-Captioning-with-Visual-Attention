@@ -56,7 +56,7 @@ class Trainer:
         coco_val_paths: dl.CocoTrainingDatasetPaths = dl.TRAINING_DATASET_PATHS[dl.DatasetType.VALIDATION],
         image_pipeline: transforms.transforms = dp.VGGNET_PREPROCESSING_PIPELINE,
         caption_pipeline: dp.TextPipeline = dp.TextPipeline(),
-        checkpoint_dir: str = "./checkpoints",
+        checkpoint_dir: str = os.path.join(os.environ["TORCH_HOME"], "checkpoints"),
     ):
         self.coco_train = dl.CocoCaptions(
             dset_paths=coco_train_paths,
@@ -82,7 +82,7 @@ class Trainer:
         attention_dim: int,
         dropout: float,
     ) -> None:
-        comment = f"_batch_size={batch_size}_lr={learning_rate}_lambda={loss_lambda}"
+        comment = f"_batch={batch_size}_lr={learning_rate}_lambda={loss_lambda}_dropout={dropout}"
 
         with Trainer.tensorboard(comment=comment) as tb:
             data_loader = dl.CocoLoader(
@@ -132,16 +132,15 @@ class Trainer:
                     running_loss += loss.item()
 
                     every_step = 100
-                    if step % every_step == 0 and step != 0:
-                        loss_value = running_loss / float(every_step)
-                        running_loss = 0.0
+                    if step % every_step == 0:
+                        logging.info(f"Epoch {epoch + 1} Step {step}/{len(data_loader)} => {loss.item()}")
 
-                        tb.add_scalar(f"Loss_lambda={loss_lambda}", loss_value, step)
-                        logging.info(f"Epoch {epoch + 1} Step {step}/{len(data_loader)} => {loss_value}")
+                tb.add_scalar(f"cost_lambda={loss_lambda}", running_loss / len(data_loader), epoch)
+                running_loss = 0.0
 
                 for name, weight in decoder.named_parameters():
-                    tb.add_histogram(name, weight, step)
-                    tb.add_histogram(f"{name}.grad", weight.grad, step)
+                    tb.add_histogram(name, weight, epoch)
+                    tb.add_histogram(f"{name}.grad", weight.grad, epoch)
 
                 self.coco_train.shuffle(subset_len=500)
 
@@ -155,12 +154,12 @@ if __name__ == "__main__":
 
     trainer = Trainer()
     trainer.train(
-        num_epochs=2,
+        num_epochs=10,
         batch_size=16,
         learning_rate=0.0008,
-        loss_lambda=0.01,
+        loss_lambda=0.0,
         embedding_dim=256,
         decoder_dim=512,
         attention_dim=256,
-        dropout=0.5,
+        dropout=0.0,
     )
