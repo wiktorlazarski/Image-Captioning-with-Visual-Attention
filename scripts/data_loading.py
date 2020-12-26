@@ -1,4 +1,6 @@
+import math
 import os
+import random
 from dataclasses import dataclass
 from enum import Enum
 from typing import Callable, Dict, List, Optional, Tuple, Union
@@ -98,11 +100,8 @@ class CocoCaptions(dset.VisionDataset):
         Args:
             subset_len (int): Shuffle subset length.
         """
-        import random
-        import math
-
         new_dataset_order = []
-        for i in range(math.ceil((len(self.dataset) / subset_len))):
+        for i in range(math.ceil(len(self.dataset) / subset_len)):
             subset = self.dataset[i * subset_len : (i + 1) * subset_len]
             new_dataset_order.extend(random.sample(subset, len(subset)))
 

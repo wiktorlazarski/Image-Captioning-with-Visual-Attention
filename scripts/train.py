@@ -1,4 +1,5 @@
 import contextlib
+import logging
 import math
 import os
 from typing import Generator
@@ -79,7 +80,7 @@ class Trainer:
         embedding_dim: int,
         decoder_dim: int,
         attention_dim: int,
-        dropout: float = 0.5,
+        dropout: float,
     ) -> None:
         comment = f"_batch_size={batch_size}_lr={learning_rate}_lambda={loss_lambda}"
 
@@ -98,6 +99,7 @@ class Trainer:
             )
 
             device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            logging.info(f"Training on device {torch.cuda.get_device_name(device.index)}")
 
             self.encoder.to(device)
             decoder.to(device)
@@ -129,30 +131,36 @@ class Trainer:
 
                     running_loss += loss.item()
 
-                    every_step = 1
+                    every_step = 100
                     if step % every_step == 0 and step != 0:
-                        tb.add_scalar("loss", running_loss / float(every_step), step)
-                        print(f"Step {step} => {running_loss / float(every_step)}")
+                        loss_value = running_loss / float(every_step)
                         running_loss = 0.0
 
-                        for name, weight in decoder.named_parameters():
-                            tb.add_histogram(name, weight, step)
-                            tb.add_histogram(f"{name}.grad", weight.grad, step)
+                        tb.add_scalar(f"Loss_lambda={loss_lambda}", loss_value, step)
+                        logging.info(f"Epoch {epoch + 1} Step {step}/{len(data_loader)} => {loss_value}")
+
+                for name, weight in decoder.named_parameters():
+                    tb.add_histogram(name, weight, step)
+                    tb.add_histogram(f"{name}.grad", weight.grad, step)
 
                 self.coco_train.shuffle(subset_len=500)
 
 
 if __name__ == "__main__":
-    trainer = Trainer()
-    learning_rate = 0.001
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s: %(message)s",
+        datefmt="%d/%m/%Y %H:%M",
+    )
 
+    trainer = Trainer()
     trainer.train(
         num_epochs=2,
         batch_size=16,
-        learning_rate=learning_rate,
-        loss_lambda=0.0,
-        embedding_dim=64,
-        decoder_dim=256,
-        attention_dim=128,
-        dropout=0.5
+        learning_rate=0.0008,
+        loss_lambda=0.01,
+        embedding_dim=256,
+        decoder_dim=512,
+        attention_dim=256,
+        dropout=0.5,
     )
