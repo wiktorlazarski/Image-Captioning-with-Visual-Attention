@@ -129,17 +129,17 @@ class TextPipeline:
             sequences (List[List[int]]): List of encoded captions.
 
         Returns:
-            List[List[int]]: Padded target values to the same length as first sample.
+            List[List[int]]: Padded target values to the same length.
         """
-        captions_batch_len = len(sequences[0])
+        max_caption_len = max(map(len, sequences))
 
-        targets = [sequences[0]]
-        for sequence in sequences[1:]:
-            if len(sequence) == captions_batch_len:
+        targets = []
+        for sequence in sequences:
+            if len(sequence) == max_caption_len:
                 targets.append(sequence)
                 continue
 
-            num_paddings = captions_batch_len - len(sequence)
+            num_paddings = max_caption_len - len(sequence)
             sequence.extend([self.vocabulary.word2idx("<PAD>")] * num_paddings)
 
             targets.append(sequence)

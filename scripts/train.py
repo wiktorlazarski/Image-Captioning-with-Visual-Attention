@@ -34,7 +34,7 @@ class DoublyStochasticAttentionLoss(nn.CrossEntropyLoss):
         """
         loss = super().forward(y_pred, y_true)
 
-        loss += self.hyperparameter_lambda * ((1 - alphas.sum(dim=0)) ** 2).sum(dim=1).mean()
+        loss += self.hyperparameter_lambda * ((1.0 - alphas.sum(dim=0)) ** 2).sum(dim=1).mean()
 
         return loss
 
@@ -72,6 +72,7 @@ class Trainer:
 
     def train(
         self,
+        num_epochs: int,
         batch_size: int,
         learning_rate: float,
         loss_lambda: float,
@@ -80,7 +81,7 @@ class Trainer:
         attention_dim: int,
         dropout: float = 0.5,
     ) -> None:
-        comment = f"_batch_size={batch_size}_lr={learning_rate}"
+        comment = f"_batch_size={batch_size}_lr={learning_rate}_lambda={loss_lambda}"
 
         with Trainer.tensorboard(comment=comment) as tb:
             data_loader = dl.CocoLoader(
@@ -105,20 +106,21 @@ class Trainer:
             optimizer = torch.optim.Adam(params=decoder.parameters(), lr=learning_rate)
             criterion = DoublyStochasticAttentionLoss(loss_lambda).to(device)
 
-            for epoch in range(1):
+            for epoch in range(num_epochs):
                 running_loss = 0.0
 
-                for batch_idx, batch in enumerate(data_loader):
+                for step, batch in enumerate(data_loader):
                     images, captions = batch[0].to(device), batch[1].to(device)
 
                     optimizer.zero_grad()
 
                     predictions, attentions = decoder(*self.encoder(images), captions)
 
-                    caption_len = captions.shape[1] - 1
+                    num_samples, caption_len = captions.shape[0], captions.shape[1] - 1
+
                     loss = criterion(
-                        predictions.reshape(caption_len * batch_size, self.num_embeddings),
-                        captions[:, 1:].reshape(caption_len * batch_size),
+                        predictions.reshape(caption_len * num_samples, self.num_embeddings),
+                        captions[:, 1:].reshape(caption_len * num_samples),
                         attentions,
                     )
 
@@ -126,23 +128,31 @@ class Trainer:
                     optimizer.step()
 
                     running_loss += loss.item()
-                    if batch_idx % 25 == 0 and batch_idx != 0:
-                        tb.add_scalar("loss", running_loss / 25.0, batch_idx)
-                        print(f"Batch {batch_idx} => {running_loss}")
+
+                    every_step = 1
+                    if step % every_step == 0 and step != 0:
+                        tb.add_scalar("loss", running_loss / float(every_step), step)
+                        print(f"Step {step} => {running_loss / float(every_step)}")
                         running_loss = 0.0
 
-                break
+                        for name, weight in decoder.named_parameters():
+                            tb.add_histogram(name, weight, step)
+                            tb.add_histogram(f"{name}.grad", weight.grad, step)
+
+                self.coco_train.shuffle(subset_len=500)
 
 
 if __name__ == "__main__":
     trainer = Trainer()
-    learning_rate = 0.0005
+    learning_rate = 0.001
 
     trainer.train(
+        num_epochs=2,
         batch_size=16,
         learning_rate=learning_rate,
-        loss_lambda=0.1,
-        embedding_dim=32,
-        decoder_dim=128,
-        attention_dim=256,
+        loss_lambda=0.0,
+        embedding_dim=64,
+        decoder_dim=256,
+        attention_dim=128,
+        dropout=0.5
     )

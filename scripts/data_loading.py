@@ -92,6 +92,22 @@ class CocoCaptions(dset.VisionDataset):
         """
         return len(self.dataset)
 
+    def shuffle(self, subset_len: int) -> None:
+        """Shuffle 500 elements subsets of dataset.
+
+        Args:
+            subset_len (int): Shuffle subset length.
+        """
+        import random
+        import math
+
+        new_dataset_order = []
+        for i in range(math.ceil((len(self.dataset) / subset_len))):
+            subset = self.dataset[i * subset_len : (i + 1) * subset_len]
+            new_dataset_order.extend(random.sample(subset, len(subset)))
+
+        self.dataset = new_dataset_order
+
     def _sort_dataset_on_token_count(self) -> List[Tuple[int, str]]:
         """Function which reorganized dataset by sorting data by number of tokens in captions.
         Reorganization is done to increase training speed performance.
