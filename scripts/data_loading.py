@@ -93,7 +93,7 @@ class CocoCaptions(dset.VisionDataset):
         return len(self.dataset)
 
     def shuffle(self, subset_len: int) -> None:
-        """Shuffle 500 elements subsets of dataset.
+        """Shuffle subset_len elements subsets of dataset.
 
         Args:
             subset_len (int): Shuffle subset length.
