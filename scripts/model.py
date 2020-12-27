@@ -164,8 +164,8 @@ class LSTMDecoder(nn.Module):
         feature_maps: torch.tensor,
         feature_mean: torch.tensor,
         beam_size: int,
-        start_token: int,
-        end_token: int,
+        start_token_index: int,
+        end_token_index: int,
         max_length: int
     ) -> Tuple[List[int], List[torch.tensor]]:
         """Predict caption with Beam Search decoding.
@@ -174,8 +174,8 @@ class LSTMDecoder(nn.Module):
             feature_maps (torch.tensor): Flatten feature maps (1, num_feature_maps, feature_map_dim).
             feature_mean (torch.tensor): Flatten feature maps mean (1, feature_map_dim).
             beam_size (int): beam size
-            start_token (int): index of '<SOS>' token
-            end_token (int): index of '<EOS>' token
+            start_token_index (int): index of '<SOS>' token
+            end_token_index (int): index of '<EOS>' token
             max_length (int): maximum number of iterations
 
         Returns:
@@ -183,6 +183,7 @@ class LSTMDecoder(nn.Module):
                                                   Context vectors of each prediction (time_step, encoder_dim)
         """
         self.eval()
+        device = next(self.parameters()).device
 
         with torch.no_grad():
             h = self.init_h(feature_mean)
@@ -193,9 +194,9 @@ class LSTMDecoder(nn.Module):
 
             for timestep in range(max_length):
                 if timestep == 0:
-                    y_pred = start_token
+                    y_pred = start_token_index
 
-                embedding_t = self.word_embedding(torch.tensor([y_pred]))
+                embedding_t = self.word_embedding(torch.tensor([y_pred], device=device))
 
                 z, _ = self.attention(feature_maps, h)
 
@@ -213,7 +214,7 @@ class LSTMDecoder(nn.Module):
                 y_pred = torch.argmax(preds).item()
                 sequence.append(y_pred)
 
-                if y_pred == end_token:
+                if y_pred == end_token_index:
                     break
 
         return sequence, contexts
