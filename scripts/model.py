@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, List
 
 import torch
 import torch.nn as nn
@@ -139,8 +139,8 @@ class LSTMDecoder(nn.Module):
         attention_scores = []
 
         caption_len = embeddings.shape[1]
-        for time_step in range(caption_len - 1):
-            embeddings_t = embeddings[:, time_step]
+        for timestep in range(caption_len - 1):
+            embeddings_t = embeddings[:, timestep]
 
             z, alphas = self.attention(feature_maps, h)
 
@@ -158,3 +158,64 @@ class LSTMDecoder(nn.Module):
             predictions.append(preds)
 
         return torch.stack(predictions), torch.stack(attention_scores)
+
+    def predict(
+        self,
+        feature_maps: torch.tensor,
+        feature_mean: torch.tensor,
+        beam_size: int,
+        start_token: int,
+        end_token: int,
+        max_length: int
+    ) -> Tuple[torch.tensor, List[torch.tensor]]:
+        """Predict caption with Beam Search decoding.
+
+        Args:
+            feature_maps (torch.tensor): Flatten feature maps (1, num_feature_maps, feature_map_dim).
+            feature_mean (torch.tensor): Flatten feature maps mean (1, feature_map_dim).
+            beam_size (int): beam size
+            start_token (int): index of '<SOS>' token
+            end_token (int): index of '<EOS>' token
+            max_length (int): maximum number of iterations
+
+        Returns:
+            Tuple[torch.tensor, List[torch.tensor]]: Predictions at each time step (time_step, vocabulary_size)
+                                                     Context vectors of each prediction (time_step, encoder_dim)
+        """
+        self.eval()
+
+        h = self.init_h(feature_mean)
+        c = self.init_c(feature_mean)
+
+        contexts = []
+        sequence = []
+
+        for timestep in range(max_length):
+            if timestep == 0:
+                y_pred = start_token
+
+            embedding_t = self.word_embedding(torch.tensor([y_pred]))
+
+            z, _ = self.attention(feature_maps, h)
+
+            beta = torch.sigmoid(self.beta_fc(h))
+            z = z * beta
+
+            contexts.append(z.squeeze())
+
+            h, c = self.lstm(torch.cat([embedding_t, z], dim=1), (h, c))
+
+            out = embedding_t + self.hidden_fc(self.dropout(h)) + self.context_fc(z)
+
+            preds = self.output_layer(out)
+
+            y_pred = torch.argmax(preds).item()
+            sequence.append(y_pred)
+
+            if y_pred == end_token:
+                break
+
+        return sequence, contexts
+
+
+

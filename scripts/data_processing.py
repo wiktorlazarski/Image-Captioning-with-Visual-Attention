@@ -97,6 +97,14 @@ class TextPipeline:
 
         return text
 
+    @staticmethod
+    def decode_caption(vocabulary: Vocabulary, encoded_caption: List[int]) -> str:
+        caption = []
+        for word_idx in encoded_caption:
+            caption.append(vocabulary.idx2word(word_idx))
+
+        return " ".join(caption)
+
     def __init__(self):
         self.vocabulary = Vocabulary()
 
