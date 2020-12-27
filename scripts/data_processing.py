@@ -100,6 +100,13 @@ class TextPipeline:
     @staticmethod
     def decode_caption(vocabulary: Vocabulary, encoded_caption: List[int]) -> str:
         caption = []
+
+        if encoded_caption[0] == vocabulary.word2idx("<SOS>"):
+            encoded_caption.pop(0)
+
+        if encoded_caption[-1] == vocabulary.word2idx("<EOS>"):
+            encoded_caption.pop()
+
         for word_idx in encoded_caption:
             caption.append(vocabulary.idx2word(word_idx))
 

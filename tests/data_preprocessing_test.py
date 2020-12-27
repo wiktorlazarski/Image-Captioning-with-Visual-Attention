@@ -104,3 +104,60 @@ def test_pad_sequence(text_pipeline: dp.TextPipeline) -> None:
 
     # then
     assert result == expected_result
+
+
+def test_decode_caption(vocabulary: dp.Vocabulary) -> None:
+    # given
+    caption = [vocabulary.word2idx("a"), vocabulary.word2idx("man")]
+
+    expected_result = "a man"
+
+    # when
+    result = dp.TextPipeline.decode_caption(vocabulary, caption)
+
+    # then
+    assert result == expected_result
+
+
+def test_decode_caption_first_token_sos(vocabulary: dp.Vocabulary) -> None:
+    # given
+    caption = [vocabulary.word2idx("<SOS>"), vocabulary.word2idx("a"), vocabulary.word2idx("man")]
+
+    expected_result = "a man"
+
+    # when
+    result = dp.TextPipeline.decode_caption(vocabulary, caption)
+
+    # then
+    assert result == expected_result
+
+
+def test_decode_caption_last_token_eos(vocabulary: dp.Vocabulary) -> None:
+    # given
+    caption = [vocabulary.word2idx("a"), vocabulary.word2idx("man"), vocabulary.word2idx("<EOS>")]
+
+    expected_result = "a man"
+
+    # when
+    result = dp.TextPipeline.decode_caption(vocabulary, caption)
+
+    # then
+    assert result == expected_result
+
+
+def test_decode_caption_sos_and_eos(vocabulary: dp.Vocabulary) -> None:
+    # given
+    caption = [
+        vocabulary.word2idx("<SOS>"),
+        vocabulary.word2idx("a"),
+        vocabulary.word2idx("man"),
+        vocabulary.word2idx("<EOS>"),
+    ]
+
+    expected_result = "a man"
+
+    # when
+    result = dp.TextPipeline.decode_caption(vocabulary, caption)
+
+    # then
+    assert result == expected_result
