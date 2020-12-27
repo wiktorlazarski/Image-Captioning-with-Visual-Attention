@@ -29,7 +29,7 @@ class CocoTrainingDatasetPaths:
     captions_json: str
 
 
-TRAINING_DATASET_PATHS: Dict[DatasetType, CocoTrainingDatasetPaths] = {
+DATASET_PATHS: Dict[DatasetType, CocoTrainingDatasetPaths] = {
     DatasetType.TRAIN: CocoTrainingDatasetPaths(
         images="./data/train/train2017",
         captions_json="./data/train/captions_train2017.json",

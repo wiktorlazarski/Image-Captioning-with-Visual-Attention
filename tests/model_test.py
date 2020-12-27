@@ -10,7 +10,7 @@ from scripts import model
 @pytest.fixture
 def train_batch() -> Tuple[torch.tensor, torch.tensor]:
     coco_dset = dl.CocoCaptions(
-        dl.TRAINING_DATASET_PATHS[dl.DatasetType.VALIDATION],
+        dl.DATASET_PATHS[dl.DatasetType.VALIDATION],
         transform=dp.VGGNET_PREPROCESSING_PIPELINE,
         target_transform=dp.TextPipeline(),
     )

@@ -40,6 +40,14 @@ class DoublyStochasticAttentionLoss(nn.CrossEntropyLoss):
         return loss
 
 
+class Validator:
+    def __init__(self):
+        pass
+
+    def validate() -> None:
+        pass
+
+
 class Trainer:
     @staticmethod
     @contextlib.contextmanager
@@ -52,8 +60,8 @@ class Trainer:
 
     def __init__(
         self,
-        coco_train_paths: dl.CocoTrainingDatasetPaths = dl.TRAINING_DATASET_PATHS[dl.DatasetType.TRAIN],
-        coco_val_paths: dl.CocoTrainingDatasetPaths = dl.TRAINING_DATASET_PATHS[dl.DatasetType.VALIDATION],
+        coco_train_paths: dl.CocoTrainingDatasetPaths = dl.DATASET_PATHS[dl.DatasetType.TRAIN],
+        coco_val_paths: dl.CocoTrainingDatasetPaths = dl.DATASET_PATHS[dl.DatasetType.VALIDATION],
         image_pipeline: transforms.transforms = dp.VGGNET_PREPROCESSING_PIPELINE,
         caption_pipeline: dp.TextPipeline = dp.TextPipeline(),
         checkpoint_dir: str = os.path.join(os.environ["TORCH_HOME"], "checkpoints"),
@@ -109,7 +117,7 @@ class Trainer:
             criterion = DoublyStochasticAttentionLoss(loss_lambda).to(device)
 
             for epoch in range(num_epochs):
-                running_loss = 0.0
+                cost = 0.0
 
                 for step, batch in enumerate(data_loader):
                     images, captions = batch[0].to(device), batch[1].to(device)
@@ -129,18 +137,21 @@ class Trainer:
                     loss.backward()
                     optimizer.step()
 
-                    running_loss += loss.item()
+                    cost += loss.item()
 
                     every_step = 100
                     if step % every_step == 0:
                         logging.info(f"Epoch {epoch + 1} Step {step}/{len(data_loader)} => {loss.item()}")
 
-                tb.add_scalar(f"cost_lambda={loss_lambda}", running_loss / len(data_loader), epoch)
-                running_loss = 0.0
+                tb.add_scalar(f"cost_lambda={loss_lambda}", cost / len(data_loader), epoch)
+                cost = 0.0
 
                 for name, weight in decoder.named_parameters():
                     tb.add_histogram(name, weight, epoch)
                     tb.add_histogram(f"{name}.grad", weight.grad, epoch)
+
+                # Compute metrics
+                # validator.validate(encoder, decoder. tb)
 
                 self.coco_train.shuffle(subset_len=500)
 

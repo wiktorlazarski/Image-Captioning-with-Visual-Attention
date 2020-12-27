@@ -6,7 +6,7 @@ import scripts.data_processing as dp
 @pytest.fixture
 def coco_dataset() -> dl.CocoCaptions:
     dset_type = dl.DatasetType.VALIDATION
-    return dl.CocoCaptions(dset_paths=dl.TRAINING_DATASET_PATHS[dset_type])
+    return dl.CocoCaptions(dset_paths=dl.DATASET_PATHS[dset_type])
 
 
 def test_coco_dataset_len(coco_dataset: dl.CocoCaptions) -> None:
