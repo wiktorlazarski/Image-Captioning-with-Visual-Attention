@@ -167,10 +167,10 @@ if __name__ == "__main__":
     trainer.train(
         num_epochs=10,
         batch_size=16,
-        learning_rate=0.0008,
+        learning_rate=0.001,
         loss_lambda=0.0,
         embedding_dim=256,
         decoder_dim=512,
         attention_dim=256,
-        dropout=0.0,
+        dropout=0.2,
     )

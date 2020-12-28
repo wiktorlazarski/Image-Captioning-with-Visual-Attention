@@ -159,27 +159,25 @@ class LSTMDecoder(nn.Module):
 
         return torch.stack(predictions), torch.stack(attention_scores)
 
-    def predict(
+    def greedy_decoding(
         self,
         feature_maps: torch.tensor,
         feature_mean: torch.tensor,
-        beam_size: int,
         start_token_index: int,
         end_token_index: int,
         max_length: int
     ) -> Tuple[List[int], List[torch.tensor]]:
-        """Predict caption with Beam Search decoding.
+        """Predict caption with Greedy decoding.
 
         Args:
             feature_maps (torch.tensor): Flatten feature maps (1, num_feature_maps, feature_map_dim).
             feature_mean (torch.tensor): Flatten feature maps mean (1, feature_map_dim).
-            beam_size (int): beam size
             start_token_index (int): index of '<SOS>' token
             end_token_index (int): index of '<EOS>' token
             max_length (int): maximum number of iterations
 
         Returns:
-            Tuple[List[int], List[torch.tensor]]: Predictions at each time step (time_step, vocabulary_size)
+            Tuple[List[int], List[torch.tensor]]: Predictions at each time step (time_step)
                                                   Context vectors of each prediction (time_step, encoder_dim)
         """
         self.eval()
