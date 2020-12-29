@@ -1,5 +1,5 @@
 import contextlib
-import logging
+import logging as log
 import math
 import os
 from typing import Generator
@@ -78,6 +78,8 @@ class Trainer:
         self.encoder = model.VGG19Encoder()
 
         self.checkpoint_dir = checkpoint_dir
+        if not os.path.exists(self.checkpoint_dir):
+            os.mkdir(self.checkpoint_dir)
 
     def train(
         self,
@@ -107,7 +109,7 @@ class Trainer:
             )
 
             device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-            logging.info(f"Training on device {torch.cuda.get_device_name(device.index)}")
+            log.info(f"Training on device {torch.cuda.get_device_name(device.index)}")
 
             self.encoder.to(device)
             decoder.to(device)
@@ -118,6 +120,7 @@ class Trainer:
 
             for epoch in range(num_epochs):
                 cost = 0.0
+                running_loss = 0.0
 
                 for step, batch in enumerate(data_loader):
                     images, captions = batch[0].to(device), batch[1].to(device)
@@ -138,27 +141,78 @@ class Trainer:
                     optimizer.step()
 
                     cost += loss.item()
+                    running_loss += loss.item()
 
-                    every_step = 100
-                    if step % every_step == 0:
-                        logging.info(f"Epoch {epoch + 1} Step {step}/{len(data_loader)} => {loss.item()}")
+                    every_step = 10
+                    if step % every_step == 0 and step != 0:
+                        avg_loss = running_loss / every_step
+                        running_loss = 0.0
+                        log.info(f"Epoch {epoch + 1} Step {step}/{len(data_loader)} => {avg_loss}")
 
-                tb.add_scalar(f"cost_lambda={loss_lambda}", cost / len(data_loader), epoch)
-                cost = 0.0
-
-                for name, weight in decoder.named_parameters():
-                    tb.add_histogram(name, weight, epoch)
-                    tb.add_histogram(f"{name}.grad", weight.grad, epoch)
+                self._save_checkpoint(
+                    epoch=epoch,
+                    decoder_state=decoder.state_dict(),
+                    optim_state=optimizer.state_dict(),
+                    lr=learning_rate,
+                    dropout=dropout,
+                    loss_lambda=loss_lambda,
+                )
 
                 # Compute metrics
                 # validator.validate(encoder, decoder. tb)
 
+                self._save_tensorboard_data(
+                    epoch=epoch,
+                    cost=cost / len(data_loader),
+                    bleu_4=4.0,
+                    loss_lambda=loss_lambda,
+                    decoder=decoder,
+                    writer=tb,
+                )
+
                 self.coco_train.shuffle(subset_len=500)
+
+    def _save_checkpoint(
+        self,
+        epoch: int,
+        decoder_state: dict,
+        optim_state: dict,
+        lr: float,
+        dropout: float,
+        loss_lambda: float,
+    ) -> None:
+        checkpoint = {
+            "epoch": epoch,
+            "decoder": decoder_state,
+            "optimizer": optim_state,
+        }
+
+        checkpoint_output = os.path.join(
+            self.checkpoint_dir,
+            f"model_lr_{lr}_dropout_{dropout}_lambda_{loss_lambda}.pth",
+        )
+        torch.save(checkpoint, checkpoint_output)
+
+    def _save_tensorboard_data(
+        self,
+        epoch: int,
+        cost: float,
+        bleu_4: float,
+        loss_lambda: float,
+        decoder: model.LSTMDecoder,
+        writer: tb.SummaryWriter,
+    ) -> None:
+        writer.add_scalar(f"BLEU-4", bleu_4, epoch)
+        writer.add_scalar(f"cost_lambda={loss_lambda}", cost, epoch)
+
+        for name, weight in decoder.named_parameters():
+            writer.add_histogram(name, weight, epoch)
+            writer.add_histogram(f"{name}.grad", weight.grad, epoch)
 
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        level=logging.INFO,
+    log.basicConfig(
+        level=log.INFO,
         format="%(asctime)s %(levelname)s: %(message)s",
         datefmt="%d/%m/%Y %H:%M",
     )
@@ -167,10 +221,10 @@ if __name__ == "__main__":
     trainer.train(
         num_epochs=10,
         batch_size=16,
-        learning_rate=0.001,
-        loss_lambda=0.0,
-        embedding_dim=256,
-        decoder_dim=512,
-        attention_dim=256,
+        learning_rate=0.00005,
+        loss_lambda=0.001,
+        embedding_dim=128,
+        decoder_dim=256,
+        attention_dim=128,
         dropout=0.2,
     )
