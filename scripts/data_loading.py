@@ -57,16 +57,12 @@ class CocoCaptions(dset.VisionDataset):
             transform (Optional[Callable], optional): Image preprocessing pipeline. Defaults to None.
             target_transform (Optional[Callable], optional): Text preprocessing pipeline. Defaults to None.
         """
-        super().__init__(
-            root=dset_paths.images, transform=transform, target_transform=target_transform
-        )
+        super().__init__(root=dset_paths.images, transform=transform, target_transform=target_transform)
 
         self.coco = COCO(dset_paths.captions_json)
         self.dataset = self._sort_dataset_on_token_count()
 
-    def __getitem__(
-        self, index: int
-    ) -> Tuple[Union[Image.Image, torch.tensor], Union[str, List[int]]]:
+    def __getitem__(self, index: int) -> Tuple[Union[Image.Image, torch.tensor], Union[str, List[int]]]:
         """Provide access to dataset via index.
 
         Args:

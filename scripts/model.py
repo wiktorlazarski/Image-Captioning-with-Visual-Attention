@@ -1,4 +1,4 @@
-from typing import Tuple, List
+from typing import List, Tuple
 
 import torch
 import torch.nn as nn
@@ -50,9 +50,7 @@ class AdditiveAttention(nn.Module):
         self.W_2 = nn.Linear(in_features=query_dim, out_features=attention_dim)
         self.v = nn.Linear(attention_dim, 1)
 
-    def forward(
-        self, values: torch.tensor, query: torch.tensor
-    ) -> Tuple[torch.tensor, torch.tensor]:
+    def forward(self, values: torch.tensor, query: torch.tensor) -> Tuple[torch.tensor, torch.tensor]:
         """Output context vector.
 
         Args:
@@ -165,7 +163,7 @@ class LSTMDecoder(nn.Module):
         feature_mean: torch.tensor,
         start_token_index: int,
         end_token_index: int,
-        max_length: int
+        max_length: int,
     ) -> Tuple[List[int], List[torch.tensor]]:
         """Predict caption with Greedy decoding.
 
@@ -216,6 +214,3 @@ class LSTMDecoder(nn.Module):
                     break
 
         return sequence, contexts
-
-
-

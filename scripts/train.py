@@ -11,6 +11,7 @@ from torchvision import transforms
 
 import scripts.data_loading as dl
 import scripts.data_processing as dp
+import scripts.eval as ev
 from scripts import model
 
 
@@ -38,14 +39,6 @@ class DoublyStochasticAttentionLoss(nn.CrossEntropyLoss):
         loss += self.hyperparameter_lambda * ((1.0 - alphas.sum(dim=0)) ** 2).sum(dim=1).mean()
 
         return loss
-
-
-class Validator:
-    def __init__(self):
-        pass
-
-    def validate() -> None:
-        pass
 
 
 class Trainer:
@@ -80,6 +73,8 @@ class Trainer:
         self.checkpoint_dir = checkpoint_dir
         if not os.path.exists(self.checkpoint_dir):
             os.mkdir(self.checkpoint_dir)
+
+        self.validator = ev.CocoValidator(coco_val_paths, self.coco_train.target_transform.vocabulary)
 
     def train(
         self,
@@ -158,13 +153,13 @@ class Trainer:
                     loss_lambda=loss_lambda,
                 )
 
-                # Compute metrics
-                # validator.validate(encoder, decoder. tb)
+                bleu = self.validator.validate(self.encoder, decoder, device)
+                log.info(f"Epoch {epoch + 1} BLEU => {bleu}")
 
                 self._save_tensorboard_data(
                     epoch=epoch,
                     cost=cost / len(data_loader),
-                    bleu=4.0,
+                    bleu=bleu,
                     loss_lambda=loss_lambda,
                     decoder=decoder,
                     writer=tb,
@@ -219,12 +214,12 @@ if __name__ == "__main__":
 
     trainer = Trainer()
     trainer.train(
-        num_epochs=10,
+        num_epochs=2,
         batch_size=16,
         learning_rate=0.00005,
         loss_lambda=0.001,
         embedding_dim=128,
         decoder_dim=256,
-        attention_dim=128,
+        attention_dim=256,
         dropout=0.2,
     )
