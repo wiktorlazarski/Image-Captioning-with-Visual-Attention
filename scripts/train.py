@@ -164,7 +164,7 @@ class Trainer:
                 self._save_tensorboard_data(
                     epoch=epoch,
                     cost=cost / len(data_loader),
-                    bleu_4=4.0,
+                    bleu=4.0,
                     loss_lambda=loss_lambda,
                     decoder=decoder,
                     writer=tb,
@@ -197,12 +197,12 @@ class Trainer:
         self,
         epoch: int,
         cost: float,
-        bleu_4: float,
+        bleu: float,
         loss_lambda: float,
         decoder: model.LSTMDecoder,
         writer: tb.SummaryWriter,
     ) -> None:
-        writer.add_scalar(f"BLEU-4", bleu_4, epoch)
+        writer.add_scalar(f"BLEU-4", bleu, epoch)
         writer.add_scalar(f"cost_lambda={loss_lambda}", cost, epoch)
 
         for name, weight in decoder.named_parameters():
