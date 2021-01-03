@@ -18,8 +18,8 @@ from scripts import model
 class DoublyStochasticAttentionLoss(nn.CrossEntropyLoss):
     """Computes loss function for double stochastic attention model."""
 
-    def __init__(self, hyperparameter_lambda: float):
-        super().__init__()
+    def __init__(self, hyperparameter_lambda: float, ignore_index: int = -100):
+        super().__init__(ignore_index=ignore_index)
 
         self.hyperparameter_lambda = hyperparameter_lambda
 
@@ -110,7 +110,10 @@ class Trainer:
             decoder.to(device)
 
             optimizer = torch.optim.Adam(params=decoder.parameters(), lr=learning_rate)
-            criterion = DoublyStochasticAttentionLoss(loss_lambda).to(device)
+            criterion = DoublyStochasticAttentionLoss(
+                hyperparameter_lambda=loss_lambda,
+                ignore_index=self.coco_train.target_transform.vocabulary.word2idx("<PAD>"),
+            ).to(device)
 
             for epoch in range(1, num_epochs + 1):
                 decoder.train()
@@ -142,8 +145,8 @@ class Trainer:
                     if step % every_step == 0:
                         avg_loss = running_loss / every_step
                         running_loss = 0.0
-                        log.info(f"Epoch {epoch} Step {step}/{len(data_loader)} => {avg_loss}")
-                        tb.add_scalar(f"running_loss_lambda={loss_lambda}", avg_loss, step + (epoch - 1) * len(data_loader))
+                        log.info(f"Epoch {epoch} Step {step}/{len(data_loader)} => {avg_loss: .4f}")
+                        tb.add_scalar(f"loss_lambda={loss_lambda}", avg_loss, step + (epoch - 1) * len(data_loader))
 
                 self._save_checkpoint(
                     epoch=epoch,
@@ -185,7 +188,7 @@ class Trainer:
 
         checkpoint_output = os.path.join(
             self.checkpoint_dir,
-            f"model_lr_{lr}_dropout_{dropout}_lambda_{loss_lambda}.pth",
+            f"decoder_lr_{lr}_dropout_{dropout}_lambda_{loss_lambda}.pth",
         )
         torch.save(checkpoint, checkpoint_output)
 
@@ -198,7 +201,7 @@ class Trainer:
         decoder: model.LSTMDecoder,
         writer: tb.SummaryWriter,
     ) -> None:
-        writer.add_scalar(f"BLEU-4", bleu, epoch)
+        writer.add_scalar(f"BLEU", bleu, epoch)
         writer.add_scalar(f"cost_lambda={loss_lambda}", cost, epoch)
 
         for name, weight in decoder.named_parameters():
@@ -217,10 +220,10 @@ if __name__ == "__main__":
     trainer.train(
         num_epochs=5,
         batch_size=16,
-        learning_rate=1e-3,
-        loss_lambda=1e-1,
+        learning_rate=3e-4,
+        loss_lambda=0.0,
         embedding_dim=128,
         decoder_dim=256,
         attention_dim=128,
-        dropout=0.0,
+        dropout=0.5,
     )
