@@ -108,16 +108,16 @@ class Trainer:
 
             self.encoder.to(device)
             decoder.to(device)
-            decoder.train()
 
             optimizer = torch.optim.Adam(params=decoder.parameters(), lr=learning_rate)
             criterion = DoublyStochasticAttentionLoss(loss_lambda).to(device)
 
-            for epoch in range(num_epochs):
+            for epoch in range(1, num_epochs + 1):
+                decoder.train()
                 cost = 0.0
                 running_loss = 0.0
 
-                for step, batch in enumerate(data_loader):
+                for step, batch in enumerate(data_loader, 1):
                     images, captions = batch[0].to(device), batch[1].to(device)
 
                     optimizer.zero_grad()
@@ -138,11 +138,12 @@ class Trainer:
                     cost += loss.item()
                     running_loss += loss.item()
 
-                    every_step = 10
-                    if step % every_step == 0 and step != 0:
+                    every_step = 100
+                    if step % every_step == 0:
                         avg_loss = running_loss / every_step
                         running_loss = 0.0
-                        log.info(f"Epoch {epoch + 1} Step {step}/{len(data_loader)} => {avg_loss}")
+                        log.info(f"Epoch {epoch} Step {step}/{len(data_loader)} => {avg_loss}")
+                        tb.add_scalar(f"running_loss_lambda={loss_lambda}", avg_loss, step + (epoch - 1) * len(data_loader))
 
                 self._save_checkpoint(
                     epoch=epoch,
@@ -154,7 +155,7 @@ class Trainer:
                 )
 
                 bleu = self.validator.validate(self.encoder, decoder, device)
-                log.info(f"Epoch {epoch + 1} BLEU => {bleu}")
+                log.info(f"Epoch {epoch} BLEU => {bleu}")
 
                 self._save_tensorboard_data(
                     epoch=epoch,
@@ -165,7 +166,7 @@ class Trainer:
                     writer=tb,
                 )
 
-                self.coco_train.shuffle(subset_len=500)
+                self.coco_train.shuffle(subset_len=1000)
 
     def _save_checkpoint(
         self,
@@ -214,12 +215,12 @@ if __name__ == "__main__":
 
     trainer = Trainer()
     trainer.train(
-        num_epochs=2,
+        num_epochs=5,
         batch_size=16,
-        learning_rate=0.00005,
-        loss_lambda=0.001,
+        learning_rate=1e-3,
+        loss_lambda=1e-1,
         embedding_dim=128,
         decoder_dim=256,
-        attention_dim=256,
-        dropout=0.2,
+        attention_dim=128,
+        dropout=0.0,
     )

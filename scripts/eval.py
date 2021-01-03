@@ -18,6 +18,16 @@ class CocoValidator:
     def validate(
         self, encoder: model.VGG19Encoder, decoder: model.LSTMDecoder, device: torch.device
     ) -> float:
+        """Computes average BLEU score for validation dataset.
+
+        Args:
+            encoder (model.VGG19Encoder): image encoder
+            decoder (model.LSTMDecoder): caption generator
+            device (torch.device): train device
+
+        Returns:
+            float: BLEU score
+        """
         SOS_INDEX = self.vocabulary.word2idx("<SOS>")
         EOS_INDEX = self.vocabulary.word2idx("<EOS>")
 
