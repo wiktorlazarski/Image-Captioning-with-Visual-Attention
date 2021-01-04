@@ -2,7 +2,7 @@ import contextlib
 import logging as log
 import math
 import os
-from typing import Generator
+from typing import Generator, Optional
 
 import torch
 import torch.nn as nn
@@ -86,13 +86,13 @@ class Trainer:
         decoder_dim: int,
         attention_dim: int,
         dropout: float,
+        checkpoint_path: Optional[str] = None,
     ) -> None:
-        comment = f"_batch={batch_size}_lr={learning_rate}_lambda={loss_lambda}_dropout={dropout}"
+        checkpoint = torch.load(checkpoint_path) if checkpoint_path is not None else None
 
+        comment = f"_batch={batch_size}_lr={learning_rate}_lambda={loss_lambda}_dropout={dropout}"
         with Trainer.tensorboard(comment=comment) as tb:
-            data_loader = dl.CocoLoader(
-                self.coco_train, batch_size=batch_size, num_workers=math.ceil(os.cpu_count() / 2)
-            )
+            data_loader = dl.CocoLoader(self.coco_train, batch_size, math.ceil(os.cpu_count() / 2))
 
             decoder = model.LSTMDecoder(
                 num_embeddings=self.num_embeddings,
@@ -102,6 +102,8 @@ class Trainer:
                 attention_dim=attention_dim,
                 dropout=dropout,
             )
+            if checkpoint is not None:
+                decoder.load_state_dict(checkpoint["decoder"])
 
             device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
             log.info(f"Training on device {torch.cuda.get_device_name(device.index)}")
@@ -110,12 +112,16 @@ class Trainer:
             decoder.to(device)
 
             optimizer = torch.optim.Adam(params=decoder.parameters(), lr=learning_rate)
+            if checkpoint is not None:
+                optimizer.load_state_dict(checkpoint["optimizer"])
+
             criterion = DoublyStochasticAttentionLoss(
                 hyperparameter_lambda=loss_lambda,
                 ignore_index=self.coco_train.target_transform.vocabulary.word2idx("<PAD>"),
             ).to(device)
 
-            for epoch in range(1, num_epochs + 1):
+            start_epoch = 1 if checkpoint is None else checkpoint["epoch"]
+            for epoch in range(start_epoch, start_epoch + num_epochs):
                 decoder.train()
                 cost = 0.0
                 running_loss = 0.0
@@ -141,8 +147,8 @@ class Trainer:
                     cost += loss.item()
                     running_loss += loss.item()
 
-                    every_step = 100
-                    if step % every_step == 0:
+                    every_step = 10
+                    if not step % every_step:
                         avg_loss = running_loss / every_step
                         running_loss = 0.0
                         log.info(f"Epoch {epoch} Step {step}/{len(data_loader)} => {avg_loss: .4f}")
@@ -180,17 +186,13 @@ class Trainer:
         dropout: float,
         loss_lambda: float,
     ) -> None:
-        checkpoint = {
-            "epoch": epoch,
-            "decoder": decoder_state,
-            "optimizer": optim_state,
-        }
+        checkpoint = {"epoch": epoch, "decoder": decoder_state, "optimizer": optim_state,}
 
-        checkpoint_output = os.path.join(
+        checkpoint_path = os.path.join(
             self.checkpoint_dir,
             f"decoder_lr_{lr}_dropout_{dropout}_lambda_{loss_lambda}.pth",
         )
-        torch.save(checkpoint, checkpoint_output)
+        torch.save(checkpoint, checkpoint_path)
 
     def _save_tensorboard_data(
         self,
@@ -220,10 +222,11 @@ if __name__ == "__main__":
     trainer.train(
         num_epochs=5,
         batch_size=16,
-        learning_rate=3e-4,
-        loss_lambda=0.0,
-        embedding_dim=128,
-        decoder_dim=256,
+        learning_rate=0.0,
+        loss_lambda=0.1,
+        embedding_dim=64,
+        decoder_dim=128,
         attention_dim=128,
-        dropout=0.5,
+        dropout=0.2,
+        checkpoint_path="./models/checkpoints/model_lr_4e-06_dropout_0.2_lambda_0.1.pth",
     )
