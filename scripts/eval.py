@@ -15,9 +15,7 @@ class CocoValidator:
 
         self.vocabulary = vocabulary
 
-    def validate(
-        self, encoder: model.VGG19Encoder, decoder: model.LSTMDecoder, device: torch.device
-    ) -> float:
+    def validate(self, encoder: model.VGG19Encoder, decoder: model.LSTMDecoder, device: torch.device) -> float:
         """Computes average BLEU score for validation dataset.
 
         Args:

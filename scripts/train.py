@@ -1,5 +1,6 @@
+import argparse
 import contextlib
-import logging as log
+import logging
 import math
 import os
 from typing import Generator, Optional
@@ -41,7 +42,7 @@ class DoublyStochasticAttentionLoss(nn.CrossEntropyLoss):
         return loss
 
 
-class Trainer:
+class ImageCaptioningTrainer:
     @staticmethod
     @contextlib.contextmanager
     def tensorboard(comment: str) -> Generator[tb.SummaryWriter, None, None]:
@@ -78,9 +79,10 @@ class Trainer:
 
     def train(
         self,
+        *,
         num_epochs: int,
         batch_size: int,
-        learning_rate: float,
+        lr: float,
         loss_lambda: float,
         embedding_dim: int,
         decoder_dim: int,
@@ -90,8 +92,8 @@ class Trainer:
     ) -> None:
         checkpoint = torch.load(checkpoint_path) if checkpoint_path is not None else None
 
-        comment = f"_batch={batch_size}_lr={learning_rate}_lambda={loss_lambda}_dropout={dropout}"
-        with Trainer.tensorboard(comment=comment) as tb:
+        comment = f"_batch={batch_size}_lr={lr}_lambda={loss_lambda}_dropout={dropout}"
+        with ImageCaptioningTrainer.tensorboard(comment=comment) as tb:
             data_loader = dl.CocoLoader(self.coco_train, batch_size, math.ceil(os.cpu_count() / 2))
 
             decoder = model.LSTMDecoder(
@@ -106,12 +108,12 @@ class Trainer:
                 decoder.load_state_dict(checkpoint["decoder"])
 
             device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-            log.info(f"Training on device {torch.cuda.get_device_name(device.index)}")
+            logging.info(f"Training on device {torch.cuda.get_device_name(device.index)}")
 
             self.encoder.to(device)
             decoder.to(device)
 
-            optimizer = torch.optim.Adam(params=decoder.parameters(), lr=learning_rate)
+            optimizer = torch.optim.Adam(params=decoder.parameters(), lr=lr)
             if checkpoint is not None:
                 optimizer.load_state_dict(checkpoint["optimizer"])
 
@@ -147,24 +149,24 @@ class Trainer:
                     cost += loss.item()
                     running_loss += loss.item()
 
-                    every_step = 10
+                    every_step = 100
                     if not step % every_step:
                         avg_loss = running_loss / every_step
                         running_loss = 0.0
-                        log.info(f"Epoch {epoch} Step {step}/{len(data_loader)} => {avg_loss: .4f}")
+                        logging.info(f"Epoch {epoch} Step {step}/{len(data_loader)} => {avg_loss: .4f}")
                         tb.add_scalar(f"loss_lambda={loss_lambda}", avg_loss, step + (epoch - 1) * len(data_loader))
 
                 self._save_checkpoint(
                     epoch=epoch,
                     decoder_state=decoder.state_dict(),
                     optim_state=optimizer.state_dict(),
-                    lr=learning_rate,
+                    lr=lr,
                     dropout=dropout,
                     loss_lambda=loss_lambda,
                 )
 
                 bleu = self.validator.validate(self.encoder, decoder, device)
-                log.info(f"Epoch {epoch} BLEU => {bleu}")
+                logging.info(f"Epoch {epoch} BLEU => {bleu}")
 
                 self._save_tensorboard_data(
                     epoch=epoch,
@@ -186,7 +188,11 @@ class Trainer:
         dropout: float,
         loss_lambda: float,
     ) -> None:
-        checkpoint = {"epoch": epoch, "decoder": decoder_state, "optimizer": optim_state,}
+        checkpoint = {
+            "epoch": epoch,
+            "decoder": decoder_state,
+            "optimizer": optim_state,
+        }
 
         checkpoint_path = os.path.join(
             self.checkpoint_dir,
@@ -211,22 +217,39 @@ class Trainer:
             writer.add_histogram(f"{name}.grad", weight.grad, epoch)
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Image Captioning with Visual Attention training process")
+    parser.add_argument("--num_epochs", type=int, required=True, help="Number of epochs to perform in training process")
+    parser.add_argument("--batch_size", type=int, required=True, help="Batch size")
+    parser.add_argument("--lr", type=float, required=True, help="Learning rate. If checkpoint passed then learning rate will be loaded from state_dict")
+    parser.add_argument("--loss_lambda", type=float, required=True, help="Value of hyperparameter lambda from loss function")
+    parser.add_argument("--embedding_dim", type=int, required=True, help="Word embedding dimmension")
+    parser.add_argument("--decoder_dim", type=int, required=True, help="LSTM layer dimmension")
+    parser.add_argument("--attention_dim", type=int, required=True, help="Additive attendion dimmension")
+    parser.add_argument("--dropout", default=0.5, type=float, help="Dropout regularization")
+    parser.add_argument("--checkpoint_path", type=str, help="Checkpoint path")
+
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    log.basicConfig(
-        level=log.INFO,
+    logging.basicConfig(
+        level=logging.INFO,
         format="%(asctime)s %(levelname)s: %(message)s",
         datefmt="%d/%m/%Y %H:%M",
     )
 
-    trainer = Trainer()
+    args = parse_args()
+
+    trainer = ImageCaptioningTrainer()
     trainer.train(
-        num_epochs=5,
-        batch_size=16,
-        learning_rate=0.0,
-        loss_lambda=0.1,
-        embedding_dim=64,
-        decoder_dim=128,
-        attention_dim=128,
-        dropout=0.2,
-        checkpoint_path="./models/checkpoints/model_lr_4e-06_dropout_0.2_lambda_0.1.pth",
+        num_epochs=args.num_epochs,
+        batch_size=args.batch_size,
+        lr=args.lr,
+        loss_lambda=args.loss_lambda,
+        embedding_dim=args.embedding_dim,
+        decoder_dim=args.decoder_dim,
+        attention_dim=args.attention_dim,
+        dropout=args.dropout,
+        checkpoint_path=args.checkpoint_path,
     )
