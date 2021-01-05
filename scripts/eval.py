@@ -9,14 +9,11 @@ from scripts import model
 
 class CocoValidator:
     def __init__(self, dset_paths: dl.CocoTrainingDatasetPaths, vocabulary: dp.Vocabulary):
-        self.coco_val = torchvision.datasets.CocoCaptions(
-            dset_paths.images, dset_paths.captions_json, dp.VGGNET_PREPROCESSING_PIPELINE
-        )
-
+        self.coco_val = torchvision.datasets.CocoCaptions(dset_paths.images, dset_paths.captions_json, dp.VGGNET_PREPROCESSING_PIPELINE)
         self.vocabulary = vocabulary
 
     def validate(self, encoder: model.VGG19Encoder, decoder: model.LSTMDecoder, device: torch.device) -> float:
-        """Computes average BLEU score for validation dataset.
+        """Computes average BLEU-4 score for validation dataset.
 
         Args:
             encoder (model.VGG19Encoder): image encoder
@@ -24,7 +21,7 @@ class CocoValidator:
             device (torch.device): train device
 
         Returns:
-            float: BLEU score
+            float: average BLEU-4 score
         """
         SOS_INDEX = self.vocabulary.word2idx("<SOS>")
         EOS_INDEX = self.vocabulary.word2idx("<EOS>")
@@ -50,12 +47,8 @@ class CocoValidator:
 
             sequence = dp.TextPipeline.decode_caption(self.vocabulary, sequence).split()
 
-            bleu_value = bleu.sentence_bleu(
-                references=preprocessed_captions,
-                hypothesis=sequence,
-                smoothing_function=bleu.SmoothingFunction().method1,
-            )
+            bleu_4 = bleu.sentence_bleu(preprocessed_captions, sequence, (0.0, 0.0, 0.0, 1.0), bleu.SmoothingFunction().method1)
 
-            bleu_sum += bleu_value
+            bleu_sum += bleu_4
 
         return bleu_sum / len(self.coco_val)

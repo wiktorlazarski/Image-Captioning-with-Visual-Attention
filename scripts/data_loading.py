@@ -156,6 +156,7 @@ class CocoLoader(torch.utils.data.DataLoader):
             batch_size=batch_size,
             num_workers=num_workers,
             collate_fn=self._collate_fn,
+            pin_memory=True
         )
 
     def _collate_fn(

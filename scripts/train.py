@@ -68,7 +68,6 @@ class ImageCaptioningTrainer:
 
         self.num_embeddings = len(self.coco_train.target_transform.vocabulary)
         self.encoder_dim = 196
-
         self.encoder = model.VGG19Encoder()
 
         self.checkpoint_dir = checkpoint_dir
@@ -92,8 +91,7 @@ class ImageCaptioningTrainer:
     ) -> None:
         checkpoint = torch.load(checkpoint_path) if checkpoint_path is not None else None
 
-        comment = f"_batch={batch_size}_lr={lr}_lambda={loss_lambda}_dropout={dropout}"
-        with ImageCaptioningTrainer.tensorboard(comment=comment) as tb:
+        with ImageCaptioningTrainer.tensorboard(comment=f"_batch={batch_size}_lr={lr}_lambda={loss_lambda}_dropout={dropout}") as tb:
             data_loader = dl.CocoLoader(self.coco_train, batch_size, math.ceil(os.cpu_count() / 2))
 
             decoder = model.LSTMDecoder(
@@ -165,13 +163,13 @@ class ImageCaptioningTrainer:
                     loss_lambda=loss_lambda,
                 )
 
-                bleu = self.validator.validate(self.encoder, decoder, device)
-                logging.info(f"Epoch {epoch} BLEU => {bleu}")
+                bleu_4 = self.validator.validate(self.encoder, decoder, device)
+                logging.info(f"After Epoch {epoch} BLEU-4 => {bleu_4}")
 
                 self._save_tensorboard_data(
                     epoch=epoch,
                     cost=cost / len(data_loader),
-                    bleu=bleu,
+                    bleu=bleu_4,
                     loss_lambda=loss_lambda,
                     decoder=decoder,
                     writer=tb,
@@ -209,7 +207,7 @@ class ImageCaptioningTrainer:
         decoder: model.LSTMDecoder,
         writer: tb.SummaryWriter,
     ) -> None:
-        writer.add_scalar(f"BLEU", bleu, epoch)
+        writer.add_scalar(f"BLEU-4", bleu, epoch)
         writer.add_scalar(f"cost_lambda={loss_lambda}", cost, epoch)
 
         for name, weight in decoder.named_parameters():
@@ -239,9 +237,9 @@ if __name__ == "__main__":
         datefmt="%d/%m/%Y %H:%M",
     )
 
-    args = parse_args()
-
     trainer = ImageCaptioningTrainer()
+
+    args = parse_args()
     trainer.train(
         num_epochs=args.num_epochs,
         batch_size=args.batch_size,

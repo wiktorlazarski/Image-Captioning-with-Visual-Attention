@@ -102,21 +102,18 @@ class LSTMDecoder(nn.Module):
         self.init_c = nn.Linear(in_features=encoder_dim, out_features=decoder_dim)
 
         self.lstm = nn.LSTMCell(embedding_dim + encoder_dim, decoder_dim)
-        self.attention = AdditiveAttention(
-            attention_dim=attention_dim, values_dim=encoder_dim, query_dim=decoder_dim
-        )
+        self.attention = AdditiveAttention(attention_dim, values_dim=encoder_dim, query_dim=decoder_dim)
 
         self.beta_fc = nn.Linear(in_features=decoder_dim, out_features=1)
 
-        self.dropout = nn.Dropout(p=dropout)
+        self.dropout_h = nn.Dropout(p=dropout)
+        self.dropout_out = nn.Dropout(p=dropout)
 
         self.hidden_fc = nn.Linear(in_features=decoder_dim, out_features=embedding_dim)
         self.context_fc = nn.Linear(in_features=encoder_dim, out_features=embedding_dim)
         self.output_layer = nn.Linear(in_features=embedding_dim, out_features=num_embeddings)
 
-    def forward(
-        self, feature_maps: torch.tensor, feature_mean: torch.tensor, caption_batch: torch.tensor
-    ) -> Tuple[torch.tensor, torch.tensor]:
+    def forward(self, feature_maps: torch.tensor, feature_mean: torch.tensor, caption_batch: torch.tensor) -> Tuple[torch.tensor, torch.tensor]:
         """Decoder forward pass.
 
         Args:
@@ -130,8 +127,8 @@ class LSTMDecoder(nn.Module):
         """
         embeddings = self.word_embedding(caption_batch)
 
-        h = self.init_h(feature_mean)
-        c = self.init_c(feature_mean)
+        h = torch.tanh(self.init_h(feature_mean))
+        c = torch.tanh(self.init_c(feature_mean))
 
         predictions = []
         attention_scores = []
@@ -149,9 +146,10 @@ class LSTMDecoder(nn.Module):
 
             h, c = self.lstm(torch.cat([embeddings_t, z], dim=1), (h, c))
 
-            out = embeddings_t + self.hidden_fc(self.dropout(h)) + self.context_fc(z)
+            out = embeddings_t + self.hidden_fc(self.dropout_h(h)) + self.context_fc(z)
+            out = torch.tanh(out)
 
-            preds = self.output_layer(out)
+            preds = self.output_layer(self.dropout_out(out))
 
             predictions.append(preds)
 
@@ -182,8 +180,8 @@ class LSTMDecoder(nn.Module):
         device = next(self.parameters()).device
 
         with torch.no_grad():
-            h = self.init_h(feature_mean)
-            c = self.init_c(feature_mean)
+            h = torch.tanh(self.init_h(feature_mean))
+            c = torch.tanh(self.init_c(feature_mean))
 
             contexts = []
             sequence = []
@@ -203,9 +201,10 @@ class LSTMDecoder(nn.Module):
 
                 h, c = self.lstm(torch.cat([embedding_t, z], dim=1), (h, c))
 
-                out = embedding_t + self.hidden_fc(self.dropout(h)) + self.context_fc(z)
+                out = embedding_t + self.hidden_fc(self.dropout_h(h)) + self.context_fc(z)
+                out = torch.tanh(out)
 
-                preds = self.output_layer(out)
+                preds = self.output_layer(self.dropout_out(out))
 
                 y_pred = torch.argmax(preds).item()
                 sequence.append(y_pred)
