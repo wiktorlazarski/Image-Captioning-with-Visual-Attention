@@ -223,7 +223,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-if __name__ == "__main__":
+def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s", datefmt="%d/%m/%Y %H:%M")
 
     args = parse_args()
@@ -244,3 +244,7 @@ if __name__ == "__main__":
     )
 
     logging.info(f"Training FINISHED. Final validation BLEU-4 = {final_bleu: .4f}.")
+
+
+if __name__ == "__main__":
+    main()
