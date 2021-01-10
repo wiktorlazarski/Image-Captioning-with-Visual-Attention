@@ -172,7 +172,7 @@ class ImageCaptioningTrainer:
                     best_bleu = current_bleu4
                     epochs_without_improvement = 0
 
-                    self._save_best_model(embedding_dim, decoder_dim, attention_dim, decoder)
+                    self._save_best_model(embedding_dim, decoder_dim, attention_dim, decoder.state_dict(), optimizer.state_dict(), epoch, best_bleu)
                 else:
                     epochs_without_improvement += 1
                     if epochs_without_improvement == patience:
@@ -200,10 +200,17 @@ class ImageCaptioningTrainer:
             writer.add_histogram(name, weight, epoch)
             writer.add_histogram(f"{name}.grad", weight.grad, epoch)
 
-    def _save_best_model(self, embedding_dim: int, decoder_dim: int, attention_dim: int, decoder: model.LSTMDecoder) -> None:
+    def _save_best_model(self, embedding_dim: int, decoder_dim: int, attention_dim: int, decoder_state: dict, optim_state: dict, epoch: int, bleu_4: float) -> None:
+        run_dict = {
+            "epoch": epoch,
+            "bleu_4": bleu_4,
+            "decoder": decoder_state,
+            "optimizer": optim_state,
+        }
+
         output_path = os.path.join(self.best_models_dir, f"best_model_e{embedding_dim}_a{attention_dim}_d{decoder_dim}.pth")
 
-        torch.save(decoder.state_dict(), output_path)
+        torch.save(run_dict, output_path)
 
 
 def parse_args() -> argparse.Namespace:
