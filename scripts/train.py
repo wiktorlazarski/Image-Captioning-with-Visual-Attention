@@ -97,6 +97,8 @@ class ImageCaptioningTrainer:
         checkpoint_path: Optional[str] = None,
     ) -> float:
         checkpoint = torch.load(checkpoint_path) if checkpoint_path is not None else None
+        if checkpoint is not None:
+            self.coco_train,shuffle(subset_len=1000)
 
         best_bleu = 0.0
         epochs_without_improvement = 0
@@ -124,7 +126,7 @@ class ImageCaptioningTrainer:
             ).to(device)
 
             # Training loop
-            start_epoch = 1 if checkpoint is None else checkpoint["epoch"]
+            start_epoch = 1 if checkpoint is None else checkpoint["epoch"] + 1
             for epoch in range(start_epoch, start_epoch + num_epochs):
                 decoder.train()
                 cost = 0.0
@@ -138,11 +140,11 @@ class ImageCaptioningTrainer:
 
                     predictions, attentions = decoder(*self.encoder(images), captions)
 
-                    num_samples, caption_len = captions.shape[0], captions.shape[1] - 1
+                    num_samples, num_timesteps = captions.shape[0], captions.shape[1] - 1
 
                     loss = criterion(
-                        predictions.reshape(caption_len * num_samples, self.num_embeddings),
-                        captions[:, 1:].reshape(caption_len * num_samples),
+                        predictions.permute(1, 0, 2).reshape(num_timesteps * num_samples, self.num_embeddings),
+                        captions[:, 1:].reshape(num_timesteps * num_samples),
                         attentions,
                     )
 
@@ -215,13 +217,13 @@ class ImageCaptioningTrainer:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Image Captioning with Visual Attention training process")
-    parser.add_argument("--num_epochs", default=1, type=int, help="Number of epochs to perform in training process")
-    parser.add_argument("--batch_size", default=64, type=int, help="Batch size")
-    parser.add_argument("--lr", default=0.01, type=float, help="Learning rate. If checkpoint passed then learning rate will be loaded from state_dict")
-    parser.add_argument("--loss_lambda", default=1.0, type=float, help="Value of hyperparameter lambda from loss function")
+    parser.add_argument("--num_epochs", default=10, type=int, help="Number of epochs to perform in training process")
+    parser.add_argument("--batch_size", default=16, type=int, help="Batch size")
+    parser.add_argument("--lr", default=3e-4, type=float, help="Learning rate. If checkpoint passed then learning rate will be loaded from state_dict")
+    parser.add_argument("--loss_lambda", default=0.0, type=float, help="Value of hyperparameter lambda from loss function")
     parser.add_argument("--embedding_dim", default=128, type=int, help="Word embedding dimmension")
     parser.add_argument("--decoder_dim", default=512, type=int, help="LSTM layer dimmension")
-    parser.add_argument("--attention_dim", default=512, type=int, help="Additive attendion dimmension")
+    parser.add_argument("--attention_dim", default=256, type=int, help="Additive attention dimmension")
     parser.add_argument("--maxlen", default=100, type=int, help="Maximum caption length in words which can be produced during validation step if <EOS> not met")
     parser.add_argument("--patience", default=10, type=int, help="Number of epochs which need to pass while doing early stopping on BLEU-4 metric.")
     parser.add_argument("--dropout", default=0.5, type=float, help="Dropout regularization")
