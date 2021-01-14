@@ -97,11 +97,12 @@ class ImageCaptioningTrainer:
         checkpoint_path: Optional[str] = None,
     ) -> float:
         checkpoint = torch.load(checkpoint_path) if checkpoint_path is not None else None
-        if checkpoint is not None:
-            self.coco_train,shuffle(subset_len=1000)
-
         best_bleu = 0.0
         epochs_without_improvement = 0
+
+        if checkpoint is not None:
+            self.coco_train.shuffle(subset_len=1000)
+            best_bleu = checkpoint["bleu_4"]
 
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         logging.info(f"Training on device {torch.cuda.get_device_name(device.index)}")
@@ -162,11 +163,10 @@ class ImageCaptioningTrainer:
                         logging.info(f"Epoch {epoch} Step {step}/{len(data_loader)} => {avg_loss: .4f}")
                         tb.add_scalar(f"loss_lambda={loss_lambda}", avg_loss, step + (epoch - 1) * len(data_loader))
 
-                self._save_checkpoint(epoch, decoder.state_dict(), optimizer.state_dict(), lr, dropout, loss_lambda)
-
                 current_bleu4 = self.validator.validate(self.encoder, decoder, device)
                 logging.info(f"After Epoch {epoch} BLEU-4 => {current_bleu4}")
 
+                self._save_checkpoint(epoch, decoder.state_dict(), optimizer.state_dict(), lr, dropout, loss_lambda, current_bleu4)
                 self._save_run(epoch, cost / len(data_loader), current_bleu4, loss_lambda, decoder, tb)
 
                 # Early stopping on BLEU-4 metric
@@ -174,7 +174,7 @@ class ImageCaptioningTrainer:
                     best_bleu = current_bleu4
                     epochs_without_improvement = 0
 
-                    self._save_best_model(embedding_dim, decoder_dim, attention_dim, decoder.state_dict(), optimizer.state_dict(), epoch, best_bleu)
+                    self._save_best_model(embedding_dim, decoder_dim, attention_dim, decoder.state_dict(), optimizer.state_dict(), epoch, best_bleu, lr)
                 else:
                     epochs_without_improvement += 1
                     if epochs_without_improvement == patience:
@@ -184,9 +184,10 @@ class ImageCaptioningTrainer:
 
         return best_bleu
 
-    def _save_checkpoint(self, epoch: int, decoder_state: dict, optim_state: dict, lr: float, dropout: float, loss_lambda: float) -> None:
+    def _save_checkpoint(self, epoch: int, decoder_state: dict, optim_state: dict, lr: float, dropout: float, loss_lambda: float, bleu_4: float) -> None:
         checkpoint = {
             "epoch": epoch,
+            "bleu_4": bleu_4,
             "decoder": decoder_state,
             "optimizer": optim_state,
         }
@@ -202,7 +203,7 @@ class ImageCaptioningTrainer:
             writer.add_histogram(name, weight, epoch)
             writer.add_histogram(f"{name}.grad", weight.grad, epoch)
 
-    def _save_best_model(self, embedding_dim: int, decoder_dim: int, attention_dim: int, decoder_state: dict, optim_state: dict, epoch: int, bleu_4: float) -> None:
+    def _save_best_model(self, embedding_dim: int, decoder_dim: int, attention_dim: int, decoder_state: dict, optim_state: dict, epoch: int, bleu_4: float, lr: float) -> None:
         run_dict = {
             "epoch": epoch,
             "bleu_4": bleu_4,
@@ -210,7 +211,7 @@ class ImageCaptioningTrainer:
             "optimizer": optim_state,
         }
 
-        output_path = os.path.join(self.best_models_dir, f"best_model_e{embedding_dim}_a{attention_dim}_d{decoder_dim}.pth")
+        output_path = os.path.join(self.best_models_dir, f"best_model_e{embedding_dim}_a{attention_dim}_d{decoder_dim}_lr{lr}.pth")
 
         torch.save(run_dict, output_path)
 
@@ -219,8 +220,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Image Captioning with Visual Attention training process")
     parser.add_argument("--num_epochs", default=10, type=int, help="Number of epochs to perform in training process")
     parser.add_argument("--batch_size", default=16, type=int, help="Batch size")
-    parser.add_argument("--lr", default=3e-4, type=float, help="Learning rate. If checkpoint passed then learning rate will be loaded from state_dict")
-    parser.add_argument("--loss_lambda", default=0.0, type=float, help="Value of hyperparameter lambda from loss function")
+    parser.add_argument("--lr", default=5e-5, type=float, help="Learning rate. If checkpoint passed then learning rate will be loaded from state_dict")
+    parser.add_argument("--loss_lambda", default=0.05, type=float, help="Value of hyperparameter lambda from loss function")
     parser.add_argument("--embedding_dim", default=128, type=int, help="Word embedding dimmension")
     parser.add_argument("--decoder_dim", default=512, type=int, help="LSTM layer dimmension")
     parser.add_argument("--attention_dim", default=256, type=int, help="Additive attention dimmension")
