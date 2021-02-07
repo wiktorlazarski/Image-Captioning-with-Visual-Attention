@@ -2,9 +2,9 @@ import nltk.translate.bleu_score as bleu
 import torch
 import torchvision
 
-import data_loading as dl
-import data_processing as dp
-import model
+import scripts.data_loading as dl
+import scripts.data_processing as dp
+from scripts import model
 
 
 class CocoValidator:

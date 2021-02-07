@@ -10,10 +10,10 @@ import torch.nn as nn
 from torch.utils import tensorboard as tb
 from torchvision import transforms
 
-import data_loading as dl
-import data_processing as dp
-import eval as ev
-import model
+import scripts.data_loading as dl
+import scripts.data_processing as dp
+import scripts.eval as ev
+from scripts import model
 
 
 class DoublyStochasticAttentionLoss(nn.CrossEntropyLoss):

@@ -10,7 +10,7 @@ from PIL import Image
 from pycocotools.coco import COCO
 from torchvision import datasets as dset
 
-import data_processing as dp
+import scripts.data_processing as dp
 
 
 class DatasetType(Enum):
