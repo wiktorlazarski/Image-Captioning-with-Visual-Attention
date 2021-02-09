@@ -17,9 +17,17 @@ decoder = utils.load_decoder(DECODER_PATH)
 def caption_image() -> None:
     if request.method == "POST":
         image_file = request.files["image"]
-        image_bytes = image_file.read()
 
-        image_caption = predict_caption(image_bytes)
+        if image_file is None:
+            return jsonify({"error": "IMAGE FILE REQUIRED"})
+        elif not allowed_image_format(image_file.filename):
+            return jsonify({"error": "WRONG IMAGE FORMAT ONLY jpg, png, jpeg ARE ALLOWED"})
+
+        try:
+            image_bytes = image_file.read()
+            image_caption = predict_caption(image_bytes)
+        except:
+            return jsonify({"error": "ERROR OCCURRED DURING CAPTIONING PROCESS"})
 
         return jsonify({"caption": image_caption})
 
@@ -39,3 +47,13 @@ def predict_caption(image_bytes: bytes) -> str:
 
     caption = utils.decode_caption(sequence)
     return caption
+
+
+def allowed_image_format(filename: str) -> bool:
+    allowed_formats = ["jpg", "png", "jpeg"]
+
+    for img_format in allowed_formats:
+        if filename.endswith(img_format):
+            return True
+
+    return False
