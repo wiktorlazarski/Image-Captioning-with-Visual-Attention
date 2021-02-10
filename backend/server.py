@@ -1,3 +1,4 @@
+import base64
 import os
 
 from flask import Flask, jsonify, request
@@ -16,18 +17,15 @@ decoder = utils.load_decoder(DECODER_PATH)
 @app.route("/caption", methods=["POST"])
 def caption_image() -> None:
     if request.method == "POST":
-        image_file = request.files["image"]
+        json = request.get_json()
+        image_str = json["image"]
 
-        if image_file is None:
-            return jsonify({"error": "IMAGE FILE REQUIRED"})
-        elif not allowed_image_format(image_file.filename):
-            return jsonify({"error": "WRONG IMAGE FORMAT ONLY jpg, png, jpeg ARE ALLOWED"})
-
+        image_caption = None
         try:
-            image_bytes = image_file.read()
+            image_bytes = base64.b64decode(image_str)
             image_caption = predict_caption(image_bytes)
-        except:
-            return jsonify({"error": "ERROR OCCURRED DURING CAPTIONING PROCESS"})
+        except Exception as e:
+            return jsonify({"caption": f"ERROR {str(e)}"})
 
         return jsonify({"caption": image_caption})
 
