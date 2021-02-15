@@ -184,6 +184,7 @@ class LSTMDecoder(nn.Module):
             c = torch.tanh(self.init_c(feature_mean))
 
             contexts = []
+            betas = []
             sequence = []
 
             for timestep in range(max_length):
@@ -197,8 +198,6 @@ class LSTMDecoder(nn.Module):
                 beta = torch.sigmoid(self.beta_fc(h))
                 z = z * beta
 
-                contexts.append(z.squeeze())
-
                 h, c = self.lstm(torch.cat([embedding_t, z], dim=1), (h, c))
 
                 out = embedding_t + self.hidden_fc(self.dropout_h(h)) + self.context_fc(z)
@@ -207,9 +206,12 @@ class LSTMDecoder(nn.Module):
                 preds = self.output_layer(self.dropout_out(out))
 
                 y_pred = torch.argmax(preds).item()
+
+                betas.append(beta.item())
+                contexts.append(z.squeeze())
                 sequence.append(y_pred)
 
                 if y_pred == end_token_index:
                     break
 
-        return sequence, contexts
+        return sequence, contexts, betas
