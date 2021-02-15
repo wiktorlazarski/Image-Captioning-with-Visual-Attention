@@ -45,13 +45,3 @@ def predict_caption(image_bytes: bytes) -> str:
 
     caption = utils.decode_caption(sequence)
     return caption
-
-
-def allowed_image_format(filename: str) -> bool:
-    allowed_formats = ["jpg", "png", "jpeg"]
-
-    for img_format in allowed_formats:
-        if filename.endswith(img_format):
-            return True
-
-    return False
