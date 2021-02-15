@@ -29,8 +29,6 @@ def plot_embeddings(
 
 
 def reduce_to_k_dim(embeddings: np.array, k: int = 2) -> np.array:
-    E_reduced = None
-
     pca = PCA(n_components=k)
     E_reduced = pca.fit_transform(embeddings)
 

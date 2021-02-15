@@ -200,10 +200,10 @@ class LSTMDecoder(nn.Module):
 
                 h, c = self.lstm(torch.cat([embedding_t, z], dim=1), (h, c))
 
-                out = embedding_t + self.hidden_fc(self.dropout_h(h)) + self.context_fc(z)
+                out = embedding_t + self.hidden_fc(h) + self.context_fc(z)
                 out = torch.tanh(out)
 
-                preds = self.output_layer(self.dropout_out(out))
+                preds = self.output_layer(out)
 
                 y_pred = torch.argmax(preds).item()
 
