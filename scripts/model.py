@@ -227,7 +227,21 @@ class LSTMDecoder(nn.Module):
         beam_size: int,
         num_sequences: int,
         max_length: int
-    ) -> List[int]:
+    ) -> Tuple[List[int], float]:
+        """Predict num_sequences using beam search decoding.
+
+        Args:
+            feature_maps (torch.tensor): Flatten feature maps (1, num_feature_maps, feature_map_dim).
+            feature_mean (torch.tensor): Flatten feature maps mean (1, feature_map_dim).
+            start_token_index (int): index of '<SOS>' token
+            end_token_index (int): index of '<EOS>' token
+            beam_size (int): beam size
+            num_sequences (int): number of outputted sequences
+            max_length (int): maximum number of iterations
+
+        Returns:
+            Tuple[List[int], float]: sequence with coresponding average score - average next word probability
+        """
         self.eval()
         device = next(self.parameters()).device
 
