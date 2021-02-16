@@ -3,7 +3,6 @@ from typing import List, Tuple
 import cv2 as cv
 import matplotlib.pyplot as plt
 import numpy as np
-import rest_api.utils
 from sklearn.decomposition import PCA
 
 import scripts.data_processing as dp
@@ -35,9 +34,9 @@ def reduce_to_k_dim(embeddings: np.array, k: int = 2) -> np.array:
     return E_reduced
 
 
-def paint_attention(
+def plot_context(
     original_image: np.array, encoder_input_dim: Tuple[int, int], context: np.array, beta: float
-) -> np.array:
+) -> None:
     resized = cv.resize(original_image, encoder_input_dim)
 
     context = cv.resize(context, encoder_input_dim)
@@ -50,7 +49,7 @@ def paint_attention(
 
     context_vis = cv.addWeighted(resized, 0.5, context, 0.5, 0)
 
-    return context_vis
+    plt.imshow(context_vis)
 
 
 def plot_betas(betas: List[float], words: List[str]) -> None:
