@@ -11,6 +11,13 @@ import scripts.data_processing as dp
 def plot_embeddings(
     embeddings: np.array, words: List[str], vocab: dp.Vocabulary = dp.Vocabulary()
 ) -> None:
+    """Plot word embeddings in 2D.
+
+    Args:
+        embeddings (np.array): Embeddings matrix
+        words (List[str]): List of words to be plotted
+        vocab (dp.Vocabulary, optional): Vocabulary. Defaults to dp.Vocabulary().
+    """
     E_reduced = reduce_to_k_dim(embeddings)
 
     x = []
@@ -28,6 +35,15 @@ def plot_embeddings(
 
 
 def reduce_to_k_dim(embeddings: np.array, k: int = 2) -> np.array:
+    """Reduces embedding matrix to k dimensions.
+
+    Args:
+        embeddings (np.array): Original embedding matrix
+        k (int): Output embedding vectors dimension. Defaults to 2.
+
+    Returns:
+        np.array: reduced embedding matrix
+    """
     pca = PCA(n_components=k)
     E_reduced = pca.fit_transform(embeddings)
 
@@ -37,6 +53,14 @@ def reduce_to_k_dim(embeddings: np.array, k: int = 2) -> np.array:
 def plot_context(
     original_image: np.array, encoder_input_dim: Tuple[int, int], context: np.array, beta: float
 ) -> None:
+    """Plots context obtain from attention mechanism.
+
+    Args:
+        original_image (np.array): Original input image passed to NN
+        encoder_input_dim (Tuple[int, int]): Encoder input image width, height
+        context (np.array): context matrix
+        beta (float): beta coefficient describing importance of context vector
+    """
     resized = cv.resize(original_image, encoder_input_dim)
 
     context = cv.resize(context, encoder_input_dim)
@@ -53,6 +77,12 @@ def plot_context(
 
 
 def plot_betas(betas: List[float], words: List[str]) -> None:
+    """Plot beta coefficient for each word predicted.
+
+    Args:
+        betas (List[float]): List of betas for particular time step
+        words (List[str]): Predicted words
+    """
     plt.ylim([0, 1.1])
     plt.yticks(np.arange(0.0, 1.1, 0.1))
     xs = range(len(words))
