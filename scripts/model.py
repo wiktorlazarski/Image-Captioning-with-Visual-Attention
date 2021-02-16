@@ -247,7 +247,7 @@ class LSTMDecoder(nn.Module):
 
         @dataclass
         class BeamNode:
-            prediction: int
+            word_index: int
             score: float
             h: torch.tensor
             c: torch.tensor
@@ -265,7 +265,7 @@ class LSTMDecoder(nn.Module):
                 new_nodes = []
 
                 for node in current_nodes:
-                    embedding_t = self.word_embedding(torch.tensor([node.prediction], device=device))
+                    embedding_t = self.word_embedding(torch.tensor([node.word_index], device=device))
 
                     z, _ = self.attention(feature_maps, node.h)
                     beta = torch.sigmoid(self.beta_fc(node.h))
@@ -306,7 +306,7 @@ class LSTMDecoder(nn.Module):
             total_score = final_node.score
 
             while final_node.prev_node is not None:
-                sequence.append(final_node.prediction)
+                sequence.append(final_node.word_index)
 
                 final_node = final_node.prev_node
 
