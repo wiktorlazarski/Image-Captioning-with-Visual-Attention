@@ -1,4 +1,6 @@
-from typing import List, Tuple
+import operator
+from dataclasses import dataclass
+from typing import List, Tuple, Any
 
 import torch
 import torch.nn as nn
@@ -22,10 +24,9 @@ class VGG19Encoder(nn.Module):
 
         Args:
             image_batch (torch.tensor): tensor of preprocessed images (batch_size, 3, 224, 224).
-
-        Returns:
+example
             Tuple[torch.tensor, torch.tensor]: Flatten feature maps (batch_size, 512, 196).
-                                               Feature maps mean (batch_size, 196).
+                                             example  Feature maps mean (batch_size, 196).
         """
         feature_maps = self.vgg19(image_batch)
         feature_mean = feature_maps.mean(dim=1)
@@ -162,7 +163,7 @@ class LSTMDecoder(nn.Module):
         start_token_index: int,
         end_token_index: int,
         max_length: int,
-    ) -> Tuple[List[int], List[torch.tensor]]:
+    ) -> Tuple[List[int], List[torch.tensor], List[float]]:
         """Predict caption with Greedy decoding.
 
         Args:
@@ -173,8 +174,9 @@ class LSTMDecoder(nn.Module):
             max_length (int): maximum number of iterations
 
         Returns:
-            Tuple[List[int], List[torch.tensor]]: Predictions at each time step (time_step)
-                                                  Context vectors of each prediction (time_step, encoder_dim)
+            Tuple[List[int], List[torch.tensor], List[float]]: Predictions at each time step (time_step)
+                                                               Context vectors of each prediction (time_step, encoder_dim)
+                                                               Beta coefficient
         """
         self.eval()
         device = next(self.parameters()).device
@@ -215,3 +217,87 @@ class LSTMDecoder(nn.Module):
                     break
 
         return sequence, contexts, betas
+
+    def beam_search(
+        self,
+        feature_maps: torch.tensor,
+        feature_mean: torch.tensor,
+        start_token_index: int,
+        end_token_index: int,
+        beam_size: int,
+        num_sequences: int,
+        max_length: int
+    ) -> List[int]:
+        self.eval()
+        device = next(self.parameters()).device
+
+        @dataclass
+        class BeamNode:
+            prediction: int
+            score: float
+            h: torch.tensor
+            c: torch.tensor
+            prev_node: Any
+
+        with torch.no_grad():
+            h = torch.tanh(self.init_h(feature_mean))
+            c = torch.tanh(self.init_c(feature_mean))
+
+            root = BeamNode(start_token_index, 0.0, h, c, None)
+            final_nodes = []
+            current_nodes = [root]
+
+            for timestep in range(max_length):
+                new_nodes = []
+
+                for node in current_nodes:
+                    embedding_t = self.word_embedding(torch.tensor([node.prediction], device=device))
+
+                    z, _ = self.attention(feature_maps, node.h)
+                    beta = torch.sigmoid(self.beta_fc(node.h))
+                    z = z * beta
+
+                    h, c = self.lstm(torch.cat([embedding_t, z], dim=1), (node.h, node.c))
+
+                    out = embedding_t + self.hidden_fc(h) + self.context_fc(z)
+                    out = torch.tanh(out)
+
+                    preds = self.output_layer(out).squeeze()
+                    preds = torch.softmax(preds, dim=0)
+
+                    values, indices = torch.topk(preds, beam_size)
+                    values = values.tolist()
+                    indices = indices.tolist()
+
+                    for prob, word_index in zip(values, indices):
+                        new_node = BeamNode(word_index, prob + node.score, h, c, node)
+
+                        if word_index == end_token_index:
+                            final_nodes.append(new_node)
+                        else:
+                            new_nodes.append(new_node)
+
+                if len(final_nodes) >= num_sequences:
+                    final_nodes = final_nodes[:num_sequences]
+                    break
+                elif timestep == max_length - 1 and len(final_nodes) == 0:
+                    final_nodes = [max(new_nodes, key=operator.attrgetter("score"))]
+                else:
+                    current_nodes = sorted(new_nodes, reverse=True, key=operator.attrgetter("score"))[:beam_size]
+
+        # backtracking
+        best_sequences = []
+        for final_node in final_nodes:
+            sequence = []
+            total_score = final_node.score
+
+            while final_node.prev_node is not None:
+                sequence.append(final_node.prediction)
+
+                final_node = final_node.prev_node
+
+            seq_score = total_score / len(sequence)
+            best_sequences.append((list(reversed(sequence)), seq_score))
+
+        return best_sequences
+

@@ -218,6 +218,7 @@ class ImageCaptioningTrainer:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Image Captioning with Visual Attention training process")
+
     parser.add_argument("--num_epochs", default=10, type=int, help="Number of epochs to perform in training process")
     parser.add_argument("--batch_size", default=16, type=int, help="Batch size")
     parser.add_argument("--lr", default=5e-5, type=float, help="Learning rate. If checkpoint passed then learning rate will be loaded from state_dict")
