@@ -37,7 +37,7 @@ class CocoValidator:
 
             feature_maps, feature_mean = encoder.forward(image.unsqueeze(0))
 
-            sequence, _ = decoder.greedy_decoding(
+            sequence, _, _ = decoder.greedy_decoding(
                 feature_maps=feature_maps,
                 feature_mean=feature_mean,
                 start_token_index=SOS_INDEX,

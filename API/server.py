@@ -4,9 +4,9 @@ import os
 from flask import Flask, jsonify, request
 from scripts import model
 
-from backend import utils
+from API import utils
 
-DECODER_PATH = os.environ["FLASK_APP_DECODER_PATH"]
+DECODER_PATH = "./API/decoder_brain.pth"
 
 app = Flask(__name__)
 
@@ -35,7 +35,7 @@ def predict_caption(image_bytes: bytes) -> str:
 
     feature_maps, feature_mean = encoder.forward(input_image)
 
-    sequence, _ = decoder.greedy_decoding(
+    sequence, _, _ = decoder.greedy_decoding(
         feature_maps=feature_maps,
         feature_mean=feature_mean,
         start_token_index=utils.VOCABULARY.word2idx("<SOS>"),
