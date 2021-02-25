@@ -24,9 +24,9 @@ class VGG19Encoder(nn.Module):
 
         Args:
             image_batch (torch.tensor): tensor of preprocessed images (batch_size, 3, 224, 224).
-example
+
             Tuple[torch.tensor, torch.tensor]: Flatten feature maps (batch_size, 512, 196).
-                                             example  Feature maps mean (batch_size, 196).
+                                               Feature maps mean (batch_size, 196).
         """
         feature_maps = self.vgg19(image_batch)
         feature_mean = feature_maps.mean(dim=1)
