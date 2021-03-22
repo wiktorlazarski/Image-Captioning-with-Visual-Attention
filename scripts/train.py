@@ -219,15 +219,15 @@ class ImageCaptioningTrainer:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Image Captioning with Visual Attention training process")
 
-    parser.add_argument("--num_epochs", default=10, type=int, help="Number of epochs to perform in training process")
+    parser.add_argument("--num_epochs", default=5, type=int, help="Number of epochs to perform in training process")
     parser.add_argument("--batch_size", default=16, type=int, help="Batch size")
-    parser.add_argument("--lr", default=5e-5, type=float, help="Learning rate. If checkpoint passed then learning rate will be loaded from state_dict")
+    parser.add_argument("--lr", default=3e-4, type=float, help="Learning rate. If checkpoint passed then learning rate will be loaded from state_dict")
     parser.add_argument("--loss_lambda", default=0.05, type=float, help="Value of hyperparameter lambda from loss function")
-    parser.add_argument("--embedding_dim", default=128, type=int, help="Word embedding dimmension")
-    parser.add_argument("--decoder_dim", default=512, type=int, help="LSTM layer dimmension")
-    parser.add_argument("--attention_dim", default=256, type=int, help="Additive attention dimmension")
+    parser.add_argument("--embedding_dim", default=256, type=int, help="Word embedding dimmension")
+    parser.add_argument("--decoder_dim", default=256, type=int, help="LSTM layer dimmension")
+    parser.add_argument("--attention_dim", default=128, type=int, help="Additive attention dimmension")
     parser.add_argument("--maxlen", default=100, type=int, help="Maximum caption length in words which can be produced during validation step if <EOS> not met")
-    parser.add_argument("--patience", default=10, type=int, help="Number of epochs which need to pass while doing early stopping on BLEU-4 metric.")
+    parser.add_argument("--patience", default=3, type=int, help="Number of epochs which need to pass while doing early stopping on BLEU-4 metric.")
     parser.add_argument("--dropout", default=0.5, type=float, help="Dropout regularization")
     parser.add_argument("--checkpoint_path", type=str, help="Checkpoint path")
 

@@ -17,15 +17,15 @@ VGGNET_PREPROCESSING_PIPELINE = transforms.Compose(
 class Vocabulary:
     """Vocabulary class which maps tokens' indexes and words"""
 
-    COCO_CAPTION_TOP10K_WORDS = "./assets/text/vocabulary_10k.csv"
+    DEFAULT_VOCABULARY_WORDS = "./assets/text/vocabulary_10k.csv"
     SPECIAL_TOKENS = ["<SOS>", "<EOS>", "<UNK>", "<PAD>"]
 
-    def __init__(self, path: str = COCO_CAPTION_TOP10K_WORDS):
+    def __init__(self, path: str = DEFAULT_VOCABULARY_WORDS):
         """Constructor
 
         Args:
             path (str): Path to csv file containing 'WORD' column from which words will be loaded.
-                        Defaults to COCO_CAPTION_TOP10K_WORDS.
+                        Defaults to DEFAULT_VOCABULARY_WORDS.
         """
         most_frequent_words = pd.read_csv(path)["WORD"]
         self._idx2word, self._word2idx = self._create_mappings(most_frequent_words)
