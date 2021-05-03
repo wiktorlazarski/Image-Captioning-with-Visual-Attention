@@ -35,13 +35,16 @@ def predict_caption(image_bytes: bytes) -> str:
 
     feature_maps, feature_mean = encoder.forward(input_image)
 
-    sequence, _, _ = decoder.greedy_decoding(
+    sequences = decoder.beam_search(
         feature_maps=feature_maps,
         feature_mean=feature_mean,
         start_token_index=utils.VOCABULARY.word2idx("<SOS>"),
         end_token_index=utils.VOCABULARY.word2idx("<EOS>"),
+        beam_size=3,
+        num_sequences=1,
         max_length=100,
     )
+    sequences = sorted(sequences, reverse=True, key=lambda x: x[1])
 
-    caption = utils.decode_caption(sequence)
+    caption = utils.decode_caption(sequences[0][0])
     return caption
