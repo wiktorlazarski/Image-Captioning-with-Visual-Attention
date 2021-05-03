@@ -9,7 +9,7 @@ import scripts.data_processing as dp
 
 
 def plot_embeddings(
-    embeddings: np.array, words: List[str], vocab: dp.Vocabulary = dp.Vocabulary()
+    embeddings: np.array, words: List[str], vocab: dp.Vocabulary = dp.Vocabulary(), out_path: str = None
 ) -> None:
     """Plot word embeddings in 2D.
 
@@ -31,6 +31,10 @@ def plot_embeddings(
         plt.annotate(word, (word_x + 0.01, word_y + 0.01), color="blue", fontsize=12)
 
     plt.scatter(x, y, c="red")
+    
+    if out_path is not None:
+        plt.savefig(out_path, dpi=100)
+    
     plt.show()
 
 

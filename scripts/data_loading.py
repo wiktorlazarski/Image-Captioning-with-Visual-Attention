@@ -38,6 +38,10 @@ DATASET_PATHS: Dict[DatasetType, CocoTrainingDatasetPaths] = {
         images="./data/validation/val2017",
         captions_json="./data/validation/captions_val2017.json",
     ),
+    DatasetType.TEST: CocoTrainingDatasetPaths(
+        images="./data/test/test2014",
+        captions_json="./data/test/image_info_test2014.json",
+    ),
 }
 
 
