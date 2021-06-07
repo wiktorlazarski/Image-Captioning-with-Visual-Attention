@@ -26,9 +26,9 @@ class CocoValidator:
         SOS_INDEX = self.vocabulary.word2idx("<SOS>")
         EOS_INDEX = self.vocabulary.word2idx("<EOS>")
 
-        bleu_sum = 0.0
-
-        for image, captions in self.coco_val:
+        refs=[]
+        hyps=[]
+        for i, (image, captions) in enumerate(self.coco_val):
             preprocessed_captions = [dp.TextPipeline.normalize(caption).split() for caption in captions]
 
             max_length = max([len(caption) for caption in preprocessed_captions])
@@ -46,14 +46,12 @@ class CocoValidator:
             )
 
             sequence = dp.TextPipeline.decode_caption(self.vocabulary, sequence).split()
+            hyps.append(sequence)
+            refs.append(preprocessed_captions)
 
-            bleu_4 = bleu.sentence_bleu(preprocessed_captions, sequence, (0.0, 0.0, 0.0, 1.0), bleu.SmoothingFunction().method1)
+        return bleu.corpus_bleu(refs, hyps)
 
-            bleu_sum += bleu_4
 
-        return bleu_sum / len(self.coco_val)
-    
-    
     def validate_beam(self, encoder: model.VGG19Encoder, decoder: model.LSTMDecoder, beam_size: int, num_sequences: int, device: torch.device) -> float:
         """Computes average BLEU-4 score for validation dataset.
 
@@ -70,8 +68,8 @@ class CocoValidator:
         SOS_INDEX = self.vocabulary.word2idx("<SOS>")
         EOS_INDEX = self.vocabulary.word2idx("<EOS>")
 
-        bleu_sum = 0.0
-
+        refs=[]
+        hyps=[]
         for image, captions in self.coco_val:
             preprocessed_captions = [dp.TextPipeline.normalize(caption).split() for caption in captions]
 
@@ -91,11 +89,9 @@ class CocoValidator:
                 max_length=max_length,
             )
             sequences = sorted(sequences, reverse=True, key=lambda x: x[1])
-            
+
             sequence = dp.TextPipeline.decode_caption(self.vocabulary, sequences[0][0]).split()
+            hyps.append(sequence)
+            refs.append(preprocessed_captions)
 
-            bleu_4 = bleu.sentence_bleu(preprocessed_captions, sequence, (0.0, 0.0, 0.0, 1.0), bleu.SmoothingFunction().method1)
-
-            bleu_sum += bleu_4
-
-        return bleu_sum / len(self.coco_val)
+        return bleu.corpus_bleu(refs, hyps)
